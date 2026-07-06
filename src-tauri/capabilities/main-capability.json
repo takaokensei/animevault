@@ -21,7 +21,6 @@
     "fs:read-all",
     {
       "identifier": "fs:allow-create",
-
       "allow": [{ "path": "$APP/mal_tokens.json" }]
     },
     {
@@ -37,4 +36,4 @@
       "allow": [{ "path": "$APP/**" }]
     }
   ]
-}
+}
