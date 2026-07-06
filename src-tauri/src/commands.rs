@@ -51,18 +51,18 @@ pub struct PkceData {
 #[tauri::command]
 pub fn generate_pkce_challenge() -> PkceData {
     let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let code_verifier: String = (0..128)
         .map(|_| {
-            let idx = rng.gen_range(0..charset.len());
+            let idx = rng.random_range(0..charset.len());
             charset[idx] as char
         })
         .collect();
 
     let state: String = (0..32)
         .map(|_| {
-            let idx = rng.gen_range(0..charset.len());
+            let idx = rng.random_range(0..charset.len());
             charset[idx] as char
         })
         .collect();

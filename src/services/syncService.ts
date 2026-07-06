@@ -1,5 +1,6 @@
 import { databaseService } from './database';
 import { invoke } from './tauriService';
+import { useSaasAuthStore } from '../stores/saasAuthStore';
 
 export interface SyncEvent {
   id: number;
@@ -99,29 +100,46 @@ export class SyncService {
     const pending = await this.getPendingEvents();
     if (pending.length === 0) return;
 
-    console.log(`[SyncService] Iniciando processamento de ${pending.length} eventos pendentes...`);
+    const token = useSaasAuthStore.getState().zenithToken;
+    const isSaasActive = !!token;
+
+    console.log(`[SyncService] Iniciando processamento de ${pending.length} eventos pendentes. SaaS ativo: ${isSaasActive}`);
+
+    let synced = 0;
+    let failed = 0;
 
     for (const event of pending) {
       try {
-        const payload = JSON.parse(event.payload);
-        console.log(`[SyncService] Sincronizando evento ${event.id} (${event.action}). Payload:`, payload);
+        const startTime = Date.now();
+        console.log(`[SyncService] Sincronizando evento ${event.id} (${event.action}).`);
         
-        // Invoca a sincronização através do Rust nativo
+        // Invoca a sincronização através do Rust nativo — passa token JWT obrigatório
         const success = await invoke<boolean>('sync_to_saas_db', {
+          token: token || '',
           action: event.action,
           payload: event.payload
         });
         
+        const duration = Date.now() - startTime;
+
         if (success) {
           await this.markAsSynced(event.id);
+          synced++;
+          console.log(`[SyncService] ✅ Evento ${event.id} sincronizado em ${duration}ms.`);
         } else {
           await this.markAsFailed(event.id, event.attempts);
+          failed++;
+          console.warn(`[SyncService] ⚠️ Evento ${event.id} falhou na resposta do SaaS.`);
         }
       } catch (err) {
-        console.error(`[SyncService] Falha ao processar evento ${event.id}:`, err);
+        console.error(`[SyncService] ❌ Falha ao processar evento ${event.id}:`, err);
         await this.markAsFailed(event.id, event.attempts);
+        failed++;
       }
     }
+
+    // Audit log resumido ao final do ciclo
+    console.log(`[SyncService] Ciclo concluído — ✅ ${synced} sincronizados | ❌ ${failed} falhos | Total: ${pending.length}`);
   }
 }
 

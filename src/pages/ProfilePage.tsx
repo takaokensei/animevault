@@ -11,13 +11,14 @@ import { toast } from 'react-toastify';
 import { ThemeSelector } from '../components/profile/ThemeSelector';
 import { GeminiRecommendations } from '../components/profile/GeminiRecommendations';
 import { SaasAccountCard } from '../components/profile/SaasAccountCard';
+import { GenreChart } from '../components/profile/GenreChart';
+import { ActivityCalendar } from '../components/profile/ActivityCalendar';
 import { 
   BookOpen, 
   Clock, 
   Tv, 
   Star, 
   BarChart2, 
-  Tags, 
   History
 } from 'lucide-react';
 
@@ -92,17 +93,6 @@ export const ProfilePage: React.FC = () => {
     .filter(a => a.lastWatched)
     .sort((a, b) => new Date(b.lastWatched!).getTime() - new Date(a.lastWatched!).getTime())
     .slice(0, 4);
-
-  // Gêneros mais frequentes
-  const genreCounts: { [key: string]: number } = {};
-  animes.forEach(anime => {
-    anime.genres?.forEach(g => {
-      genreCounts[g] = (genreCounts[g] || 0) + 1;
-    });
-  });
-  const topGenres = Object.entries(genreCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
 
   const handleImportXml = async () => {
     try {
@@ -345,43 +335,14 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {/* Coluna 3: Gêneros Favoritos */}
-          <div className="space-y-8">
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl flex flex-col h-full">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <Tags className="w-5 h-5 text-violet-400" />
-                <span>Gêneros Mais Vistos</span>
-              </h2>
-
-              {topGenres.length === 0 ? (
-                <p className="text-white/40 text-sm text-center py-8">Nenhum gênero mapeado ainda.</p>
-              ) : (
-                <div className="space-y-5 flex-1">
-                  {topGenres.map(([genre, count], index) => {
-                    const barWidth = totalAnimes > 0 ? (count / totalAnimes) * 100 : 0;
-                    return (
-                      <div key={genre} className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-semibold text-white/80 flex items-center gap-2">
-                            <span className="text-white/30 text-xs font-mono">0{index + 1}</span>
-                            <span>{genre}</span>
-                          </span>
-                          <span className="text-white/40 font-mono text-xs">{count} animes</span>
-                        </div>
-                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div 
-                            style={{ width: `${barWidth}%` }} 
-                            className="h-full bg-gradient-to-r from-violet-600 to-indigo-500 rounded-full" 
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+          <div className="space-y-4">
+            <GenreChart animes={animes} />
           </div>
 
         </div>
+
+        {/* 📅 Calendário de Atividade */}
+        <ActivityCalendar animes={animes} />
 
         {/* 💡 Seção de Recomendações com IA (Gemini) */}
         <GeminiRecommendations animes={animes} navigate={navigate} />
