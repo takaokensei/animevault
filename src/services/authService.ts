@@ -5,7 +5,7 @@ import type { MalUserProfile } from '../database/schema';
 import { keyringSaveToken, keyringDeleteToken, KEYRING_ACCOUNTS } from './keyringService';
 import { toast } from 'react-toastify';
 
-const MAL_CLIENT_ID = import.meta.env.VITE_MAL_CLIENT_ID;
+// O Client ID do MyAnimeList é lido dinamicamente de Rust no login
 const REDIRECT_URI = 'http://127.0.0.1:1421/auth/callback';
 
 
@@ -270,12 +270,7 @@ async function executeWithRetry<T>(
   throw lastError;
 }
 
-// --- Validação de Environment ---
 function validateEnvironment(): void {
-  if (!MAL_CLIENT_ID) {
-    throw new AuthError('MAL_CLIENT_ID não configurado', 'ENV_MISSING');
-  }
-  
   if (!window.crypto?.getRandomValues) {
     throw new AuthError('Crypto API não disponível', 'CRYPTO_UNAVAILABLE');
   }
@@ -526,10 +521,18 @@ export async function loginWithMal(): Promise<void> {
       await handleAuthCallback(event);
     });
     
+    // Buscar o Client ID dinamicamente do Rust
+    let malClientId: string;
+    try {
+      malClientId = await invoke<string>('get_mal_client_id');
+    } catch (e) {
+      throw new AuthError('MyAnimeList Client ID não configurado no backend (.env)', 'ENV_MISSING', e);
+    }
+
     // Construir URL de autorização
     const authUrl = new URL('https://myanimelist.net/v1/oauth2/authorize');
     authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('client_id', MAL_CLIENT_ID);
+    authUrl.searchParams.append('client_id', malClientId);
     authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.append('code_challenge', codeChallenge);

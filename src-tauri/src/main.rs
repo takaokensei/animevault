@@ -29,6 +29,7 @@ fn main() {
             commands::generate_pkce_challenge,
             commands::start_auth_server,
             commands::exchange_code_for_token,
+            commands::get_mal_client_id,
 
             // --- Comandos Públicos da API MAL ---
             commands::get_user,

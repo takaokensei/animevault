@@ -171,7 +171,8 @@ pub fn start_auth_server(window: tauri::Window) {
     });
 }
 
-fn get_mal_client_id() -> Result<String, String> {
+#[tauri::command]
+pub fn get_mal_client_id() -> Result<String, String> {
     std::env::var("MYANIMELIST_CLIENT_ID")
         .map_err(|_| "Erro: A variável de ambiente MYANIMELIST_CLIENT_ID não está configurada no seu arquivo .env".to_string())
 }
