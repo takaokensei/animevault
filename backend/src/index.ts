@@ -1,15 +1,37 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import dotenv from 'dotenv';
 import { dbStore, CloudAnime } from './db.js';
 import { AuthService } from './auth.js';
 
+dotenv.config();
+
 const fastify = Fastify({ logger: true });
 
-// Habilitar CORS para permitir requisições de clientes Tauri locais
+// CORS — origens explícitas via ALLOWED_ORIGINS (nunca wildcard em produção)
+// Dev default: apenas localhost:1421 (porta do servidor Tauri local)
+const rawOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:1421,http://127.0.0.1:1421';
+const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
+
 await fastify.register(cors, {
-  origin: '*',
+  origin: (origin, cb) => {
+    // Tauri/Electron não enviam Origin header — permitir requisições sem origin
+    if (!origin || allowedOrigins.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Origin não autorizada pelo CORS: ${origin}`), false);
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+
+// Rate limiting global — proteção base contra varredura de endpoints
+await fastify.register(rateLimit, {
+  global: false, // Aplicado só nas rotas que configurarem explicitamente
+  max: 60,
+  timeWindow: '1 minute',
 });
 
 // Middleware simples para validar token JWT
@@ -35,7 +57,8 @@ const authenticate = async (request: any, reply: any) => {
 // --- ROTAS DO SISTEMA ---
 
 // Rota de Registro de Conta SaaS
-fastify.post('/register', async (request: any, reply) => {
+// Rate-limit: máximo 5 tentativas por minuto por IP (proteção anti-bot/brute-force)
+fastify.post('/register', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request: any, reply) => {
   const { email, password, name } = request.body || {};
 
   if (!email || !password || !name) {
@@ -68,7 +91,8 @@ fastify.post('/register', async (request: any, reply) => {
 });
 
 // Rota de Login no SaaS
-fastify.post('/login', async (request: any, reply) => {
+// Rate-limit: máximo 5 tentativas por minuto por IP (proteção anti-brute-force)
+fastify.post('/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request: any, reply) => {
   const { email, password } = request.body || {};
 
   if (!email || !password) {

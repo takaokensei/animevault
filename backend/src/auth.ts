@@ -1,7 +1,16 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'zenith_saas_ultra_secret_key_1337';
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error(
+    '[Zenith Backend] JWT_SECRET ausente ou fraco. Configure uma string aleatória de ' +
+    'pelo menos 32 caracteres na variável de ambiente antes de iniciar o servidor.'
+  );
+}
 
 export class AuthService {
   static async hashPassword(password: string): Promise<string> {
