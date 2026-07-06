@@ -525,7 +525,11 @@ export async function loginWithMal(): Promise<void> {
     let malClientId: string;
     try {
       malClientId = await invoke<string>('get_mal_client_id');
+      if (!malClientId) {
+        throw new Error('Comando Rust retornou valor vazio.');
+      }
     } catch (e) {
+      logger.error('Falha ao obter get_mal_client_id do Rust:', e);
       throw new AuthError('MyAnimeList Client ID não configurado no backend (.env)', 'ENV_MISSING', e);
     }
 

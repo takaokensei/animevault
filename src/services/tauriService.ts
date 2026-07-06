@@ -38,6 +38,10 @@ export const invoke: typeof tauriInvoke = async <T>(cmd: string, args?: any): Pr
       console.log('[MockTauri] Servidor de autenticação local inicializado em modo simulado.');
       return;
     }
+    
+    if (cmd === 'get_mal_client_id') {
+      return '28b883c187c93f5a4b50938112d68dc1';
+    }
 
     // 3. Mocks de lista de animes e busca
     if (cmd === 'get_authenticated_anime_list') {

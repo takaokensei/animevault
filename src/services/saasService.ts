@@ -2,6 +2,8 @@ import { useSaasAuthStore, ZenithUser } from '../stores/saasAuthStore';
 import { invoke } from './tauriService';
 import { keyringSaveToken, keyringDeleteToken, KEYRING_ACCOUNTS } from './keyringService';
 
+const BASE_URL = import.meta.env.VITE_ZENITH_SAAS_API_URL || 'http://localhost:1422';
+
 export class SaasService {
   private static instance: SaasService;
 
@@ -19,7 +21,7 @@ export class SaasService {
     try {
       console.log('[SaasService] Registrar usuario via API real:', { name, email });
       
-      const response = await fetch('http://localhost:1421/register', {
+      const response = await fetch(`${BASE_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,7 +65,7 @@ export class SaasService {
     try {
       console.log('[SaasService] Login usuario via API real:', email);
       
-      const response = await fetch('http://localhost:1421/login', {
+      const response = await fetch(`${BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
