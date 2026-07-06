@@ -5,8 +5,6 @@ use rand::Rng;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::io::Write;
 use tauri::Emitter;
 use tiny_http::{Header, Response, Server};
 
@@ -122,23 +120,33 @@ pub fn start_auth_server(window: tauri::Window) {
     });
 }
 
+fn get_mal_client_id() -> Result<String, String> {
+    std::env::var("MYANIMELIST_CLIENT_ID")
+        .map_err(|_| "Erro: A variável de ambiente MYANIMELIST_CLIENT_ID não está configurada no seu arquivo .env".to_string())
+}
+
+fn get_mal_client_secret() -> Result<String, String> {
+    std::env::var("MYANIMELIST_CLIENT_SECRET")
+        .map_err(|_| "Erro: A variável de ambiente MYANIMELIST_CLIENT_SECRET não está configurada no seu arquivo .env".to_string())
+}
+
 #[tauri::command]
 pub async fn exchange_code_for_token(
     code: String,
     code_verifier: String,
     redirect_uri: String,
 ) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
-    let client_secret = "REMOVED_MAL_CLIENT_SECRET"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
+    let client_secret = get_mal_client_secret()?;
     let token_url = "https://myanimelist.net/v1/oauth2/token";
     
     let params = [
-        ("client_id", client_id),
-        ("client_secret", client_secret),
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
         ("grant_type", "authorization_code"),
-        ("code", &code),
-        ("redirect_uri", &redirect_uri),
-        ("code_verifier", &code_verifier),
+        ("code", code.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
+        ("code_verifier", code_verifier.as_str()),
     ];
 
     let client = get_client();
@@ -167,7 +175,7 @@ pub async fn exchange_code_for_token(
 
 #[tauri::command]
 pub async fn get_user(username: String) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/users/{}?fields=anime_statistics",
         username
@@ -175,7 +183,7 @@ pub async fn get_user(username: String) -> Result<String, String> {
     let client = get_client();
     let res = client
         .get(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .send()
         .await
         .map_err(|e| format!("Erro ao buscar perfil: {}", e))?;
@@ -186,13 +194,13 @@ pub async fn get_user(username: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn get_anime_list(username: String, limit: Option<u32>) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let lim = limit.unwrap_or(100);
     let url = format!("https://api.myanimelist.net/v2/users/{}/animelist?fields=list_status,anime{{title,main_picture,mean,genres,num_episodes,media_type,status,start_season,studios}}&limit={}", username, lim);
     let client = get_client();
     let res = client
         .get(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .send()
         .await
         .map_err(|e| format!("Erro ao buscar lista: {}", e))?;
@@ -207,7 +215,7 @@ pub async fn search_anime(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/anime?q={}&limit={}&offset={}&fields=id,title,alternative_titles,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,num_episodes,start_season,broadcast,source,average_episode_duration,studios,pictures,background,related_anime,related_manga,recommendations,statistics",
         query,
@@ -217,7 +225,7 @@ pub async fn search_anime(
     let client = get_client();
     let res = client
         .get(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .send()
         .await
         .map_err(|e| format!("Erro ao buscar animes: {}", e))?;
@@ -228,7 +236,7 @@ pub async fn search_anime(
 
 #[tauri::command]
 pub async fn get_anime_details(anime_id: u32) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/anime/{}?fields=id,title,alternative_titles,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,num_episodes,start_season,broadcast,source,average_episode_duration,studios,pictures,background,related_anime,related_manga,recommendations,statistics",
         anime_id
@@ -236,7 +244,7 @@ pub async fn get_anime_details(anime_id: u32) -> Result<String, String> {
     let client = get_client();
     let res = client
         .get(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .send()
         .await
         .map_err(|e| format!("Erro ao buscar detalhes: {}", e))?;
@@ -277,7 +285,7 @@ pub async fn get_authenticated_anime_list(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/users/@me/animelist?fields=list_status,anime{{title,main_picture,mean,genres,num_episodes,media_type,status,start_season,studios}}&limit={}&offset={}",
         limit.unwrap_or(100),
@@ -286,7 +294,7 @@ pub async fn get_authenticated_anime_list(
     let client = get_client();
     let res = client
         .get(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .bearer_auth(token)
         .send()
         .await
@@ -314,7 +322,7 @@ pub async fn add_anime_to_list(
     num_episodes_watched: Option<u32>,
     comments: Option<String>,
 ) -> Result<String, String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/anime/{}/my_list_status",
         anime_id
@@ -334,7 +342,7 @@ pub async fn add_anime_to_list(
     let client = get_client();
     let res = client
         .put(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .bearer_auth(token)
         .form(&params)
         .send()
@@ -356,7 +364,7 @@ pub async fn add_anime_to_list(
 
 #[tauri::command]
 pub async fn remove_anime_from_list(token: String, anime_id: u32) -> Result<(), String> {
-    let client_id = "REMOVED_MAL_CLIENT_ID"; // Substitua se necessário
+    let client_id = get_mal_client_id()?;
     let url = format!(
         "https://api.myanimelist.net/v2/anime/{}/my_list_status",
         anime_id
@@ -364,7 +372,7 @@ pub async fn remove_anime_from_list(token: String, anime_id: u32) -> Result<(), 
     let client = get_client();
     let res = client
         .delete(&url)
-        .header("X-MAL-CLIENT-ID", client_id)
+        .header("X-MAL-CLIENT-ID", &client_id)
         .bearer_auth(token)
         .send()
         .await
