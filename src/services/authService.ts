@@ -2,6 +2,7 @@ import { invoke, listen } from './tauriService';
 import { UnlistenFn } from '@tauri-apps/api/event';
 import { useAuthStore } from '../stores/authStore';
 import type { MalUserProfile } from '../database/schema';
+import { keyringSaveToken, keyringDeleteToken, KEYRING_ACCOUNTS } from './keyringService';
 
 const MAL_CLIENT_ID = import.meta.env.VITE_MAL_CLIENT_ID;
 const REDIRECT_URI = 'http://127.0.0.1:1421/auth/callback';
@@ -406,7 +407,7 @@ async function handleAuthCallback(event: { payload: AuthCallbackPayload }): Prom
     logger.info('Buscando perfil do usuário');
     const profile = await fetchMalUserProfile(tokens.access_token);
     
-    // Salvar no store
+    // Salvar no store Zustand (persistido no localStorage)
     logger.info('Salvando dados no store');
     const authStore = useAuthStore.getState();
     authStore.login(
@@ -416,6 +417,17 @@ async function handleAuthCallback(event: { payload: AuthCallbackPayload }): Prom
       }, 
       profile
     );
+    
+    // Salvar tokens no keychain nativo do SO (encriptado pelo Windows/macOS/Linux)
+    // Operação assíncrona em paralelo — não bloqueia o fluxo de login
+    Promise.all([
+      keyringSaveToken(KEYRING_ACCOUNTS.MAL_ACCESS_TOKEN, tokens.access_token),
+      keyringSaveToken(KEYRING_ACCOUNTS.MAL_REFRESH_TOKEN, tokens.refresh_token),
+    ]).then(() => {
+      logger.info('Tokens MAL salvos no keychain do SO com sucesso.');
+    }).catch(err => {
+      logger.warn('Falha ao salvar no keychain do SO (tokens ainda no Zustand persist):', err);
+    });
     
     // Verificar se o login foi bem-sucedido
     const updatedState = useAuthStore.getState();
@@ -534,6 +546,17 @@ export function logout(): void {
     logger.info('Executando logout');
     useAuthStore.getState().logout();
     cleanupAuthProcess();
+
+    // Limpar tokens do keychain nativo do SO em paralelo (fire-and-forget)
+    Promise.all([
+      keyringDeleteToken(KEYRING_ACCOUNTS.MAL_ACCESS_TOKEN),
+      keyringDeleteToken(KEYRING_ACCOUNTS.MAL_REFRESH_TOKEN),
+    ]).then(() => {
+      logger.info('Tokens removidos do keychain do SO.');
+    }).catch(err => {
+      logger.warn('Falha ao remover do keychain (tokens Zustand já limpos):', err);
+    });
+
     logger.info('Logout concluído');
   } catch (error) {
     logger.error('Erro durante logout', error);

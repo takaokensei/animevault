@@ -28,3 +28,5 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 dotenvy = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
+# Armazenamento seguro de tokens OAuth no keychain nativo do SO
+keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"] }

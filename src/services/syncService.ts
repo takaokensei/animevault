@@ -101,10 +101,12 @@ export class SyncService {
     if (pending.length === 0) return;
 
     const token = useSaasAuthStore.getState().zenithToken;
+    const { setSyncing, setLastSyncedAt } = useSaasAuthStore.getState();
     const isSaasActive = !!token;
 
     console.log(`[SyncService] Iniciando processamento de ${pending.length} eventos pendentes. SaaS ativo: ${isSaasActive}`);
 
+    setSyncing(true);
     let synced = 0;
     let failed = 0;
 
@@ -140,6 +142,8 @@ export class SyncService {
 
     // Audit log resumido ao final do ciclo
     console.log(`[SyncService] Ciclo concluído — ✅ ${synced} sincronizados | ❌ ${failed} falhos | Total: ${pending.length}`);
+    setSyncing(false);
+    if (synced > 0) setLastSyncedAt(new Date().toISOString());
   }
 }
 

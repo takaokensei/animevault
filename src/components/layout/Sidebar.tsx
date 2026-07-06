@@ -1,6 +1,7 @@
 // src/components/layout/Sidebar.tsx
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useSaasAuthStore } from '../../stores/saasAuthStore';
 import { loginWithMal, logout } from '../../services/authService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
@@ -80,6 +81,9 @@ export function Sidebar() {
   const userProfile = useAuthStore((state: any) => state.userProfile);
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const isSyncing = useSaasAuthStore(s => s.isSyncing);
+  const isSaasLoggedIn = useSaasAuthStore(s => s.isSaasLoggedIn);
+  const lastSyncedAt = useSaasAuthStore(s => s.lastSyncedAt);
 
   const handleLogin = async () => {
     try {
@@ -128,6 +132,41 @@ export function Sidebar() {
             <NavItem to="/profile" icon={<ProfileIcon />} label="Perfil" />
           )}
         </nav>
+
+        {/* Indicador de Sync SaaS */}
+        {isSaasLoggedIn && (
+          <motion.div
+            className="relative flex items-center justify-center w-10 h-10 rounded-xl cursor-default"
+            title={isSyncing
+              ? 'Sincronizando com Zenith…'
+              : lastSyncedAt
+                ? `Última sync: ${new Date(lastSyncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Zenith conectado'}
+          >
+            {/* Glow de fundo quando sincronizando */}
+            {isSyncing && (
+              <div className="absolute inset-0 rounded-xl bg-violet-500/20 animate-pulse" />
+            )}
+            <motion.svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+              style={{ color: isSyncing ? '#a78bfa' : '#4ade80' }}
+              animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
+              transition={isSyncing ? { repeat: Infinity, duration: 1.2, ease: 'linear' } : { duration: 0.3 }}
+            >
+              <path d="M12 2a10 10 0 0 1 7.39 3.22" />
+              <path d="M2.05 13A10 10 0 0 0 12 22a10 10 0 0 0 9.96-9" />
+              <polyline points="22 4 22 10 16 10" />
+              <polyline points="2 20 2 14 8 14" />
+            </motion.svg>
+          </motion.div>
+        )}
       </div>
 
       {/* Bottom: user avatar or login */}

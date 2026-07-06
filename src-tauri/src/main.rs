@@ -20,6 +20,11 @@ fn main() {
             commands::open_in_browser,
             commands::check_file_exists,
 
+            // --- Comandos de Segurança (Keyring Nativo do SO) ---
+            commands::secure_save_token,
+            commands::secure_load_token,
+            commands::secure_delete_token,
+
             // --- Comandos de Autenticação ---
             commands::generate_pkce_challenge,
             commands::start_auth_server,

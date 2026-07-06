@@ -49,6 +49,41 @@ pub fn check_file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
 
+/// Salva um token sensível (OAuth, JWT) de forma segura no keychain nativo do SO.
+/// Windows: Credential Manager | macOS: Keychain | Linux: Secret Service (libsecret)
+#[tauri::command]
+pub fn secure_save_token(service: String, account: String, secret: String) -> Result<(), String> {
+    let entry = keyring::Entry::new(&service, &account)
+        .map_err(|e| format!("Keyring: falha ao criar entry: {}", e))?;
+    entry.set_password(&secret)
+        .map_err(|e| format!("Keyring: falha ao salvar token: {}", e))
+}
+
+/// Carrega um token previamente salvo no keychain nativo do SO.
+/// Retorna None se não houver token salvo para o serviço/conta informados.
+#[tauri::command]
+pub fn secure_load_token(service: String, account: String) -> Result<Option<String>, String> {
+    let entry = keyring::Entry::new(&service, &account)
+        .map_err(|e| format!("Keyring: falha ao criar entry: {}", e))?;
+    match entry.get_password() {
+        Ok(secret) => Ok(Some(secret)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("Keyring: falha ao carregar token: {}", e)),
+    }
+}
+
+/// Remove um token do keychain nativo do SO (usado no logout).
+#[tauri::command]
+pub fn secure_delete_token(service: String, account: String) -> Result<(), String> {
+    let entry = keyring::Entry::new(&service, &account)
+        .map_err(|e| format!("Keyring: falha ao criar entry: {}", e))?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()), // Já deletado — ignora
+        Err(e) => Err(format!("Keyring: falha ao deletar token: {}", e)),
+    }
+}
+
 // --- Comandos de Autenticação ---
 
 #[derive(Serialize)]

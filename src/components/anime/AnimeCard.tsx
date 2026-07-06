@@ -180,8 +180,12 @@ const AnimeCard: React.FC<AnimeCardProps> = ({
 
   return (
     <div 
-      className="relative rounded-2xl overflow-hidden shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl hover:border-[var(--accent-violet)]/40 hover:shadow-[var(--accent-violet)]/10 duration-300 flex flex-col h-[500px] w-full max-w-xs cursor-pointer group"
-      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+      className="relative rounded-2xl overflow-hidden shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl duration-300 flex flex-col cursor-pointer group"
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
+        height: '320px', // Altura fixa sincronizada com SkeletonCard
+      }}
       onClick={handleCardClick}
     >
       {/* Overlay de hover com gradiente */}
@@ -212,8 +216,18 @@ const AnimeCard: React.FC<AnimeCardProps> = ({
       <div className="p-4 flex-1 flex flex-col relative z-20 min-h-0" style={{ height: '248px' }}>
         {/* Conteúdo principal - scrollável se necessário */}
         <div className="flex-1 space-y-3 overflow-hidden">
-          <div className="flex justify-between items-start gap-3">
-            <h2 className="text-base font-semibold line-clamp-2 flex-1 leading-tight" style={{ color: 'var(--text-primary)' }}>
+          <div className="flex justify-between items-start gap-2">
+            {/* Título com truncamento garantido em 2 linhas */}
+            <h2
+              className="text-sm font-semibold flex-1 leading-snug"
+              style={{
+                color: 'var(--text-primary)',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
               {anime.title}
             </h2>
             
@@ -265,9 +279,18 @@ const AnimeCard: React.FC<AnimeCardProps> = ({
             </div>
           )}
           
-          {/* Synopsis */}
+          {/* Synopsis — limitada a 2 linhas para não quebrar a altura fixa */}
           {anime.synopsis && (
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            <p
+              className="text-xs leading-relaxed"
+              style={{
+                color: 'var(--text-secondary)',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
               {anime.synopsis}
             </p>
           )}
