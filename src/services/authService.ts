@@ -302,14 +302,14 @@ async function exchangeCodeForTokens(code: string, codeVerifier: string): Promis
   
   const params = {
     code,
-    code_verifier: codeVerifier,
-    redirect_uri: REDIRECT_URI,
+    codeVerifier,
+    redirectUri: REDIRECT_URI,
   };
   
   logger.debug('Enviando parâmetros para exchange', {
     code: code.substring(0, 20) + '...',
-    code_verifier: codeVerifier.substring(0, 20) + '...',
-    redirect_uri: REDIRECT_URI
+    codeVerifier: codeVerifier.substring(0, 20) + '...',
+    redirectUri: REDIRECT_URI
   });
   
   return executeWithRetry(async () => {
@@ -539,8 +539,8 @@ export async function loginWithMal(): Promise<void> {
     authUrl.searchParams.append('client_id', malClientId);
     authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.append('code_challenge', codeChallenge);
-    authUrl.searchParams.append('code_challenge_method', 'S256');
+    authUrl.searchParams.append('code_challenge', codeVerifier);
+    authUrl.searchParams.append('code_challenge_method', 'plain');
     
     logger.info('Abrindo navegador para autorização');
     await invoke('open_in_browser', { url: authUrl.toString() });
