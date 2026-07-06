@@ -5,8 +5,13 @@ use rand::Rng;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::Emitter;
 use tiny_http::{Header, Response, Server};
+
+// Flag global para garantir que apenas um servidor de callback rode por vez.
+// Evita o erro WSAEADDRINUSE (os error 10048) quando o login é tentado múltiplas vezes.
+static AUTH_SERVER_RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[derive(Deserialize, Serialize)]
 struct TokenResponse {
@@ -130,12 +135,20 @@ pub fn generate_pkce_challenge() -> PkceData {
 
 #[tauri::command]
 pub fn start_auth_server(window: tauri::Window) {
+    // Se já houver um servidor de callback ativo, não inicia outro.
+    // Isso evita o WSAEADDRINUSE (os error 10048) em tentativas de login consecutivas.
+    if AUTH_SERVER_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+        eprintln!("[auth_server] Servidor de callback já está rodando — reutilizando.");
+        return;
+    }
+
     std::thread::spawn(move || {
         let server_addr = "127.0.0.1:1421"; // Endereço de callback
         let server = match Server::http(server_addr) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("Falha ao iniciar o servidor de callback: {}", e);
+                AUTH_SERVER_RUNNING.store(false, Ordering::SeqCst);
                 return;
             }
         };
@@ -168,6 +181,9 @@ pub fn start_auth_server(window: tauri::Window) {
         } else {
             eprintln!("Servidor de callback expirou ou falhou em receber a requisição.");
         }
+
+        // Libera a flag para permitir nova tentativa de login no futuro.
+        AUTH_SERVER_RUNNING.store(false, Ordering::SeqCst);
     });
 }
 
