@@ -6,23 +6,17 @@ import { LocalFileService } from '../services/localFileService';
 import { useLocalAnimeStore } from '../stores/localAnimeStore';
 import { FileEntry } from '../services/localFileService';
 import { AnimeEntry } from '../types/anime';
-import Lightbox from 'yet-another-react-lightbox';
-import Zoom from 'yet-another-react-lightbox/plugins/zoom';
-import 'yet-another-react-lightbox/styles.css';
 import { 
   BookOpen, 
-  Image as ImageIcon, 
-  BarChart2, 
-  FileText, 
   AlertCircle,
   Sparkles
 } from 'lucide-react';
 
-
-
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { LocalMediaGrid } from '../components/anime/LocalMediaGrid';
+import { AnimeMetadataPanel } from '../components/anime/AnimeMetadataPanel';
+import { AnimeScreenshots } from '../components/anime/AnimeScreenshots';
 
 interface StatusOption {
   value: string;
@@ -38,20 +32,7 @@ const statusOptions: StatusOption[] = [
   { value: 'plan_to_watch', label: 'Planejo Assistir', icon: '🗓️' }
 ];
 
-const formatScore = (score: number | undefined) => {
-  if (score === undefined || score === null) return 'N/A';
-  return score.toFixed(2);
-}
 
-const formatNumber = (num: number | undefined) => {
-  if (num === undefined || num === null) return 'N/A';
-  return new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short' }).format(num);
-};
-
-const formatDuration = (minutes: number | undefined) => {
-  if (minutes === undefined || minutes === null) return 'N/A';
-  return `${minutes} min`;
-};
 
 const AnimeDetail: React.FC = (): JSX.Element => {
   const { id } = useParams();
@@ -61,8 +42,7 @@ const AnimeDetail: React.FC = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isAddingToList, setIsAddingToList] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+
 
 
   const animeId = id ? Number(id) : 0;
@@ -110,11 +90,7 @@ const AnimeDetail: React.FC = (): JSX.Element => {
     fetchAnime();
   }, [id]);
 
-  // Lightbox handlers
-  const openScreenshotModal = (index: number) => {
-    setLightboxIndex(index);
-    setLightboxOpen(true);
-  };
+
 
 
   const handleAddToList = async (status: string) => {
@@ -279,7 +255,7 @@ const AnimeDetail: React.FC = (): JSX.Element => {
                       <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
-                      <span className="font-bold text-yellow-100">{formatScore(anime.rating)}</span>
+                      <span className="font-bold text-yellow-100">{anime.rating.toFixed(2)}</span>
                     </div>
                   )}
                   {anime.year && (
@@ -383,111 +359,14 @@ const AnimeDetail: React.FC = (): JSX.Element => {
               </div>
             )}
             
-            {/* Enhanced Screenshots */}
-            {anime.screenshots && anime.screenshots.length > 0 && (
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-                <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
-                  <ImageIcon className="w-8 h-8 text-violet-400" />
-                  <span>Screenshots</span>
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {anime.screenshots.map((screenshot: string, index: number) => (
-                    <div
-                      key={index}
-                      className="relative group cursor-pointer rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-all duration-300"
-                      onClick={() => openScreenshotModal(index)}
-                    >
-                      <img
-                        src={screenshot}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Galeria de Screenshots Modular */}
+            <AnimeScreenshots screenshots={anime.screenshots || []} animeTitle={anime.title} />
           </div>
           
           {/* Enhanced Sidebar */}
           <div className="space-y-6">
-            {/* Stats Overview */}
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <BarChart2 className="w-5 h-5 text-violet-400" />
-                <span>Estatísticas</span>
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-white">{formatScore(anime.rating)}</div>
-                  <div className="text-white/60 text-sm">Nota</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-white">{anime.episodes || 'N/A'}</div>
-                  <div className="text-white/60 text-sm">Episódios</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-white">{anime.year || 'N/A'}</div>
-                  <div className="text-white/60 text-sm">Ano</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-white">{anime.popularity ? formatNumber(anime.popularity) : 'N/A'}</div>
-                  <div className="text-white/60 text-sm">Popularidade</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Enhanced Details */}
-            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-violet-400" />
-                <span>Detalhes</span>
-              </h2>
-              <div className="space-y-4">
-                {anime.media_type && (
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                    <span className="text-white/60">Tipo:</span>
-                    <span className="text-white font-medium bg-blue-500/20 px-3 py-1 rounded-full text-sm">{anime.media_type}</span>
-                  </div>
-                )}
-                {anime.average_episode_duration && (
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                    <span className="text-white/60">Duração:</span>
-                    <span className="text-white font-medium">{formatDuration(Number(anime.average_episode_duration))}</span>
-                  </div>
-                )}
-                {anime.studios && anime.studios.length > 0 && (
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                    <span className="text-white/60">Studio:</span>
-                    <span className="text-white font-medium">{anime.studios.map((s: any) => s.name).join(', ')}</span>
-                  </div>
-                )}
-                {anime.source && (
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                    <span className="text-white/60">Fonte:</span>
-                    <span className="text-white font-medium">{anime.source}</span>
-                  </div>
-                )}
-                {anime.user_score && (
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                    <span className="text-white/60">Sua Nota:</span>
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                      <span className="text-white font-medium">{formatScore(anime.user_score)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Painel de Metadados Modular */}
+            <AnimeMetadataPanel anime={anime} />
             
             {anime.related_anime && anime.related_anime.length > 0 && (
               <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
@@ -531,15 +410,6 @@ const AnimeDetail: React.FC = (): JSX.Element => {
         isEpisodeWatched={isEpisodeWatched}
       />
 
-      {anime.screenshots && anime.screenshots.length > 0 && (
-        <Lightbox
-          open={lightboxOpen}
-          close={() => setLightboxOpen(false)}
-          index={lightboxIndex}
-          slides={anime.screenshots.map(src => ({ src }))}
-          plugins={[Zoom]}
-        />
-      )}
       
       {showStatusMenu && (
         <div
