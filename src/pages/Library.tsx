@@ -3,58 +3,20 @@ import { useSyncFloatingStore } from '../stores/syncFloatingStore';
 import { useAutoScrollStore } from '../stores/autoScrollStore';
 import { fuzzyMatch } from '../utils/fuzzy';
 import { AnimatedPage } from '../components/layout/AnimatedPage';
-
-
-import AnimeCard from '../components/anime/AnimeCard';
 import { useAuthStore } from '../stores/authStore';
 import { animeService } from '../services/animeService';
 import { LoginButton } from '../components/auth/LoginButton';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-
-  // Opções de filtros
-  const statusOptions = [
-    { value: 'all', label: 'Todos' },
-    { value: 'watching', label: 'Assistindo' },
-    { value: 'completed', label: 'Completado' },
-    { value: 'on_hold', label: 'Em Pausa' },
-    { value: 'dropped', label: 'Abandonado' },
-    { value: 'plan_to_watch', label: 'Planejado' }
-  ];
-
-  const sortOptions = [
-    { value: 'title', label: 'Título' },
-    { value: 'rating', label: 'Avaliação' },
-    { value: 'episodes', label: 'Episódios' },
-    { value: 'year', label: 'Ano' },
-    { value: 'status', label: 'Status' }
-  ];
-
-  // Ícone de busca
-  const SearchIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
-      <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
-    </svg>
-  );
-
-  // Ícone de seta para baixo
-  const ChevronDownIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-      <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>
-    </svg>
-  );
+import { SearchFilters } from '../components/library/SearchFilters';
+import { LibraryGrid } from '../components/library/LibraryGrid';
 
   const Library: React.FC = () => {
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const [search, setSearch] = useState('');
     const [animes, setAnimes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('all');
     const [genreFilter, setGenreFilter] = useState('all');
     const [sortBy, setSortBy] = useState('title');
-    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-    const [showGenreDropdown, setShowGenreDropdown] = useState(false);
-    const [showSortDropdown, setShowSortDropdown] = useState(false);
     
     // Paginação inteligente de memória (Infinite Scroll)
     const [visibleCount, setVisibleCount] = useState(48);
@@ -358,14 +320,7 @@ import { motion, AnimatePresence } from 'framer-motion';
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rehydratePausedState]);
 
-    // Fechar dropdowns
-    const closeAllDropdowns = () => {
-      setShowStatusDropdown(false);
-      setShowGenreDropdown(false);
-      setShowSortDropdown(false);
-    };
-
-    // Limpar filtros
+     // Limpar filtros
     const clearFilters = () => {
       setStatusFilter('all');
       setGenreFilter('all');
@@ -374,19 +329,7 @@ import { motion, AnimatePresence } from 'framer-motion';
     };
 
     // Verificar se há filtros ativos
-    const hasActiveFilters = statusFilter !== 'all' || genreFilter !== 'all' || sortBy !== 'title' || search;
-
-    // Fechar dropdowns quando clicar fora
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-          closeAllDropdowns();
-        }
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    const hasActiveFilters = statusFilter !== 'all' || genreFilter !== 'all' || sortBy !== 'title' || !!search;
 
     // Limpar mensagens de sucesso após tempo
     useEffect(() => {
@@ -476,87 +419,6 @@ import { motion, AnimatePresence } from 'framer-motion';
     }, [filteredAnimes.length, visibleCount]);
 
 
-    // Componente Dropdown
-    const Dropdown = ({ 
-      isOpen, 
-      onToggle, 
-      options, 
-      value, 
-      onChange, 
-      placeholder,
-      defaultValue = 'all',
-    }: {
-      isOpen: boolean;
-      onToggle: () => void;
-      options: Array<{ value: string; label: string }>;
-      value: string;
-      onChange: (value: string) => void;
-      placeholder: string;
-      defaultValue?: string;
-    }) => {
-      const isActive = value !== defaultValue;
-      return (
-        <div className="relative">
-          <button 
-            onClick={onToggle}
-            className="flex h-9 items-center gap-x-2 rounded-xl px-4 text-sm font-medium transition-all duration-200"
-            style={{
-              background: isActive ? 'rgba(124,58,237,0.25)' : 'var(--bg-surface)',
-              border: isActive ? '1px solid rgba(124,58,237,0.5)' : '1px solid var(--border-subtle)',
-              color: isActive ? '#c4b5fd' : 'var(--text-secondary)',
-            }}
-          >
-            {options.find(o => o.value === value)?.label || placeholder}
-            <ChevronDownIcon />
-          </button>
-          {isOpen && (
-            <div
-              className="absolute top-full left-0 mt-2 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-60 overflow-y-auto"
-              style={{
-                background: 'rgba(22,27,34,0.98)',
-                border: '1px solid var(--border-medium)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              <div className="p-1">
-                {options.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => { onChange(option.value); onToggle(); }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-sm transition-colors duration-150"
-                    style={{
-                      color: option.value === value ? '#c4b5fd' : 'var(--text-primary)',
-                      background: option.value === value ? 'rgba(124,58,237,0.2)' : 'transparent',
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // Skeleton de carregamento
-    const LoadingSkeleton = () => (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-surface)', height: '340px' }}>
-            <div className="h-52 shimmer" />
-            <div className="p-4 space-y-3">
-              <div className="h-4 rounded-lg shimmer w-3/4" />
-              <div className="h-3 rounded-lg shimmer w-1/2" />
-              <div className="h-3 rounded-lg shimmer w-2/3" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-
-
-
     // Componente de erro
     const ErrorMessage = ({ message }: { message: string }) => (
       <div
@@ -625,71 +487,19 @@ import { motion, AnimatePresence } from 'framer-motion';
             )}
             
             {/* Barra de busca e filtros */}
-            <div className="flex flex-col gap-4 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="flex flex-1 items-stretch rounded-xl h-12 border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
-                  <span className="flex items-center pl-4" style={{ color: 'var(--text-secondary)' }}>
-                    <SearchIcon />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Buscar na sua biblioteca..."
-                    className="flex-1 bg-transparent outline-none border-none px-4 text-base"
-                    style={{ color: 'var(--text-primary)' }}
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-[#93acc8] text-sm hover:text-white transition-colors whitespace-nowrap"
-                  >
-                    Limpar filtros
-                  </button>
-                )}
-              </div>
-              
-              <div className="flex gap-3 flex-wrap" ref={dropdownRef}>
-                <Dropdown
-                  isOpen={showStatusDropdown}
-                  onToggle={() => {
-                    setShowStatusDropdown(!showStatusDropdown);
-                    setShowGenreDropdown(false);
-                    setShowSortDropdown(false);
-                  }}
-                  options={statusOptions}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  placeholder="Status"
-                />
-                <Dropdown
-                  isOpen={showGenreDropdown}
-                  onToggle={() => {
-                    setShowGenreDropdown(!showGenreDropdown);
-                    setShowStatusDropdown(false);
-                    setShowSortDropdown(false);
-                  }}
-                  options={genreOptions}
-                  value={genreFilter}
-                  onChange={setGenreFilter}
-                  placeholder="Gênero"
-                />
-                <Dropdown
-                  isOpen={showSortDropdown}
-                  onToggle={() => {
-                    setShowSortDropdown(!showSortDropdown);
-                    setShowStatusDropdown(false);
-                    setShowGenreDropdown(false);
-                  }}
-                  options={sortOptions}
-                  value={sortBy}
-                  onChange={setSortBy}
-                  placeholder="Ordenar"
-                  defaultValue="title"
-                />
-              </div>
-            </div>
+            <SearchFilters
+              search={search}
+              setSearch={setSearch}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              genreFilter={genreFilter}
+              setGenreFilter={setGenreFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              genreOptions={genreOptions}
+              clearFilters={clearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
             
             {/* Contador de resultados */}
             {!loading && animes.length > 0 && (
@@ -701,61 +511,16 @@ import { motion, AnimatePresence } from 'framer-motion';
             )}
             
             {/* Grade de cards */}
-            {loading ? (
-              <LoadingSkeleton />
-            ) : filteredAnimes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-6">
-                <div
-                  className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl"
-                  style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)' }}
-                >
-                  {animes.length === 0 ? '🎌' : '🔍'}
-                </div>
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    {animes.length === 0 ? 'Biblioteca vazia' : 'Nenhum resultado'}
-                  </h3>
-                  <p style={{ color: 'var(--text-secondary)' }} className="text-sm max-w-xs">
-                    {animes.length === 0
-                      ? 'Faça login com MyAnimeList e sincronize para ver seus animes aqui.'
-                      : 'Nenhum anime encontrado com os filtros aplicados. Tente ajustar os filtros.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5">
-                  <AnimatePresence>
-                    {displayAnimes.map(anime => (
-                      <motion.div
-                        layout
-                        key={anime.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <AnimeCard 
-                          anime={anime} 
-                          onImageError={e => console.error('Erro ao carregar imagem:', anime.coverImage, e)}
-                          onCardClick={id => navigate(`/anime/${id}`)}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
-                
-                {/* Sentinela de IntersectionObserver para carregar mais animes no scroll */}
-                {visibleCount < filteredAnimes.length && (
-                  <div id="infinite-scroll-trigger" className="h-10 w-full flex items-center justify-center py-10">
-                    <div className="w-8 h-8 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-                  </div>
-                )}
+            <LibraryGrid
+              displayAnimes={displayAnimes}
+              filteredAnimes={filteredAnimes}
+              loading={loading}
+              onCardClick={(animeId) => navigate(`/anime/${animeId}`)}
+              visibleCount={visibleCount}
+            />
 
-                {/* Marcador invisível para o auto-scroll */}
-                <div ref={scrollMarkerRef} style={{ height: '1px' }} />
-              </>
-            )}
+            {/* Marcador invisível para o auto-scroll */}
+            <div ref={scrollMarkerRef} style={{ height: '1px' }} />
           </main>
         </div>
       </AnimatedPage>
