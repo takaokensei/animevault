@@ -42,7 +42,7 @@ fastify.post('/register', async (request: any, reply) => {
     return reply.status(400).send({ error: 'Campos email, password e name são obrigatórios' });
   }
 
-  const existingUser = dbStore.findUserByEmail(email);
+  const existingUser = await dbStore.findUserByEmail(email);
   if (existingUser) {
     return reply.status(409).send({ error: 'E-mail já cadastrado no Zenith SaaS' });
   }
@@ -50,7 +50,7 @@ fastify.post('/register', async (request: any, reply) => {
   const passwordHash = await AuthService.hashPassword(password);
   const userId = 'usr_' + Math.random().toString(36).substring(2, 11);
 
-  dbStore.createUser({
+  await dbStore.createUser({
     id: userId,
     email,
     name,
@@ -75,7 +75,7 @@ fastify.post('/login', async (request: any, reply) => {
     return reply.status(400).send({ error: 'E-mail e senha são obrigatórios' });
   }
 
-  const user = dbStore.findUserByEmail(email);
+  const user = await dbStore.findUserByEmail(email);
   if (!user) {
     return reply.status(401).send({ error: 'Credenciais inválidas' });
   }
@@ -111,11 +111,11 @@ fastify.post('/sync', { preHandler: [authenticate] }, async (request: any, reply
     if (action === 'UPSERT_ANIME') {
       // Reconciliação Last-write-wins (LWW):
       // Verifica se o registro existente na nuvem possui timestamp mais recente
-      const currentCloudAnimes = dbStore.getUserAnimes(userId);
+      const currentCloudAnimes = await dbStore.getUserAnimes(userId);
       const existing = currentCloudAnimes.find(a => a.animeId === animeId);
 
       if (!existing || new Date(timestamp) > new Date(existing.updatedAt)) {
-        dbStore.upsertAnime({
+        await dbStore.upsertAnime({
           userId,
           animeId,
           title: payload.title || 'Anime Sem Título',
@@ -131,12 +131,12 @@ fastify.post('/sync', { preHandler: [authenticate] }, async (request: any, reply
         console.log(`[SaaS Sync] Ignorando UPSERT_ANIME para ID ${animeId} devido a conflito de timestamp (nuvem mais recente)`);
       }
     } else if (action === 'DELETE_ANIME') {
-      dbStore.deleteAnime(userId, animeId);
+      await dbStore.deleteAnime(userId, animeId);
     }
   }
 
   // 2. Retornar todos os animes da nuvem após reconciliação
-  const cloudAnimes = dbStore.getUserAnimes(userId);
+  const cloudAnimes = await dbStore.getUserAnimes(userId);
 
   return reply.status(200).send({
     success: true,

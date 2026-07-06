@@ -3,6 +3,7 @@ import { UnlistenFn } from '@tauri-apps/api/event';
 import { useAuthStore } from '../stores/authStore';
 import type { MalUserProfile } from '../database/schema';
 import { keyringSaveToken, keyringDeleteToken, KEYRING_ACCOUNTS } from './keyringService';
+import { toast } from 'react-toastify';
 
 const MAL_CLIENT_ID = import.meta.env.VITE_MAL_CLIENT_ID;
 const REDIRECT_URI = 'http://127.0.0.1:1421/auth/callback';
@@ -252,6 +253,15 @@ async function executeWithRetry<T>(
         nextAttempt: attempt + 2,
         maxRetries: maxRetries + 1
       });
+
+      // Notificar o usuário visualmente quando for rate-limit do MAL
+      if (isRateLimitError(error) && attempt === 0) {
+        const retrySeconds = Math.round(delay / 1000);
+        toast.warn(
+          `⚠️ MyAnimeList está com rate-limit ativo. Tentando novamente em ${retrySeconds}s...`,
+          { toastId: 'mal-rate-limit', autoClose: delay }
+        );
+      }
       
       await new Promise(resolve => setTimeout(resolve, delay));
     }

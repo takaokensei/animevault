@@ -48,7 +48,6 @@ export const useSaasAuthStore = create<SaasAuthState>()(
       // isSyncing é transiente — não persiste entre sessões
       partialize: (state) => ({
         zenithUser: state.zenithUser,
-        zenithToken: state.zenithToken,
         isSaasLoggedIn: state.isSaasLoggedIn,
         lastSyncedAt: state.lastSyncedAt,
       }),

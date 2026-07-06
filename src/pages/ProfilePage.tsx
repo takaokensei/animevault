@@ -13,6 +13,7 @@ import { GeminiRecommendations } from '../components/profile/GeminiRecommendatio
 import { SaasAccountCard } from '../components/profile/SaasAccountCard';
 import { GenreChart } from '../components/profile/GenreChart';
 import { ActivityCalendar } from '../components/profile/ActivityCalendar';
+import { SyncLogPanel } from '../components/profile/SyncLogPanel';
 import { 
   BookOpen, 
   Clock, 
@@ -196,6 +197,9 @@ export const ProfilePage: React.FC = () => {
 
         {/* ☁️ Status de Conta Zenith SaaS */}
         <SaasAccountCard />
+
+        {/* 🔄 Painel de Logs de Sincronização */}
+        <SyncLogPanel />
 
         {/* Estatísticas Rápidas */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

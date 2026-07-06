@@ -1,5 +1,6 @@
 import { useSaasAuthStore, ZenithUser } from '../stores/saasAuthStore';
 import { invoke } from './tauriService';
+import { keyringSaveToken, keyringDeleteToken, KEYRING_ACCOUNTS } from './keyringService';
 
 export class SaasService {
   private static instance: SaasService;
@@ -47,6 +48,7 @@ export class SaasService {
       };
 
       useSaasAuthStore.getState().loginSaas(user, data.token);
+      await keyringSaveToken(KEYRING_ACCOUNTS.ZENITH_JWT, data.token);
       return user;
     } catch (error) {
       console.error('[SaasService] Erro ao cadastrar no SaaS:', error);
@@ -85,6 +87,7 @@ export class SaasService {
       };
 
       useSaasAuthStore.getState().loginSaas(user, data.token);
+      await keyringSaveToken(KEYRING_ACCOUNTS.ZENITH_JWT, data.token);
       return user;
     } catch (error) {
       console.error('[SaasService] Erro ao autenticar no SaaS:', error);
@@ -97,6 +100,7 @@ export class SaasService {
    */
   async logout(): Promise<void> {
     useSaasAuthStore.getState().logoutSaas();
+    await keyringDeleteToken(KEYRING_ACCOUNTS.ZENITH_JWT);
     console.log('[SaasService] Logout concluido.');
   }
 

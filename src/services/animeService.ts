@@ -149,27 +149,47 @@ export class AnimeService {
     }
   }
 
-  // Obter detalhes de um anime (MAL + local)
+  // Obter detalhes de um anime (MAL + local) com Cache Stale-While-Revalidate (LWW)
   async obterDetalhesAnime(animeId: string): Promise<AnimeEntry | null> {
     try {
       // Buscar local primeiro
       const localAnime = await this.buscarAnimePorId(animeId);
-      let malAnime = null;
       
+      // Se o anime já existe no banco local e foi atualizado há menos de 30 dias, 
+      // retornamos o cache local imediatamente para evitar chamadas de rede e rate-limits
+      if (localAnime && localAnime.dateAdded) {
+        const dateAdded = new Date(localAnime.dateAdded);
+        const diffTime = Math.abs(Date.now() - dateAdded.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 30 && localAnime.synopsis && localAnime.genres && localAnime.genres.length > 0) {
+          console.log(`[AnimeService] Usando cache local para anime ID ${animeId} (idade: ${diffDays} dias).`);
+          return localAnime;
+        }
+      }
+
+      let malAnime = null;
       try {
+        console.log(`[AnimeService] Buscando detalhes de ID ${animeId} na rede/MAL...`);
         malAnime = await malService.getAnimeDetails(Number(animeId));
       } catch (e) {
-        // Se não conseguir buscar do MAL, retorna local
+        // Se não conseguir buscar do MAL (offline/rate-limited), retorna cache local
+        console.warn(`[AnimeService] Falha ao buscar detalhes online para ID ${animeId}, usando cache local.`, e);
         return localAnime;
       }
       
       if (localAnime) {
         // Mescla: MAL só sobrescreve metadados, nunca status/episódios/score do local
-        return this.mergeLocalWithMal(localAnime, malAnime);
+        const merged = this.mergeLocalWithMal(localAnime, malAnime);
+        // Atualiza no banco para renovar a data/limitar o cache
+        await this.atualizarAnime(merged);
+        return merged;
       }
       
-      // Se não houver local, retorna só o MAL convertido
-      return this.convertMalToLocal(malAnime);
+      // Se não houver local, insere e retorna
+      const converted = this.convertMalToLocal(malAnime);
+      await this.inserirAnime(converted);
+      return converted;
     } catch (error) {
       console.error('Erro ao obter detalhes do MAL:', error);
       return null;
