@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { animeService } from '../services/animeService';
 import { LocalFileService } from '../services/localFileService';
@@ -37,6 +37,7 @@ const statusOptions: StatusOption[] = [
 const AnimeDetail: React.FC = (): JSX.Element => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isAddingToList, setIsAddingToList] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,8 +120,20 @@ const AnimeDetail: React.FC = (): JSX.Element => {
     try {
       await LocalFileService.playVideo(file.path ?? '');
       const episodeNumber = LocalFileService.findEpisodeNumber(file.name || '');
-      if (episodeNumber && typeof addWatchedEpisode === 'function') {
+      if (episodeNumber && anime) {
         addWatchedEpisode(Number(animeId), episodeNumber);
+        
+        // Se assistiu a um episódio maior, avança o progresso no MAL e SQLite de forma reativa!
+        if (episodeNumber > anime.currentEpisode) {
+          await animeService.adicionarAnimeALista(
+            String(animeId),
+            anime.status,
+            anime.rating,
+            episodeNumber,
+            anime.notes
+          );
+          queryClient.invalidateQueries({ queryKey: ['anime', id] });
+        }
       }
     } catch (err) {
       console.error('Erro ao reproduzir episódio:', err);
@@ -128,13 +141,36 @@ const AnimeDetail: React.FC = (): JSX.Element => {
     }
   };
 
-  const handleToggleWatched = (episodeNumber: number) => {
-    if (typeof isEpisodeWatched === 'function' && typeof removeWatchedEpisode === 'function' && typeof addWatchedEpisode === 'function') {
-      if (isEpisodeWatched(Number(animeId), episodeNumber)) {
-        removeWatchedEpisode(Number(animeId), episodeNumber);
-      } else {
-        addWatchedEpisode(Number(animeId), episodeNumber);
+  const handleToggleWatched = async (episodeNumber: number) => {
+    if (!anime) return;
+    
+    let nextEpisode = anime.currentEpisode;
+    if (isEpisodeWatched(Number(animeId), episodeNumber)) {
+      removeWatchedEpisode(Number(animeId), episodeNumber);
+      // Se desmarcou o episódio atual, retrocede o progresso
+      if (episodeNumber === anime.currentEpisode) {
+        nextEpisode = Math.max(0, episodeNumber - 1);
       }
+    } else {
+      addWatchedEpisode(Number(animeId), episodeNumber);
+      // Se marcou um episódio maior, avança o progresso
+      if (episodeNumber > anime.currentEpisode) {
+        nextEpisode = episodeNumber;
+      }
+    }
+
+    try {
+      // Atualiza o progresso local, MAL e a fila Outbox SaaS
+      await animeService.adicionarAnimeALista(
+        String(animeId),
+        anime.status,
+        anime.rating,
+        nextEpisode,
+        anime.notes
+      );
+      queryClient.invalidateQueries({ queryKey: ['anime', id] });
+    } catch (err) {
+      console.error('Erro ao atualizar progresso de episódios:', err);
     }
   };
 
