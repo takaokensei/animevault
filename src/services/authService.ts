@@ -8,7 +8,6 @@ const REDIRECT_URI = 'http://127.0.0.1:1421/auth/callback';
 
 
 // Constantes de configuração
-const PKCE_VERIFIER_LENGTH = 128;
 const AUTH_TIMEOUT = 300000; // 5 minutos
 const STORAGE_KEYS = {
   PKCE_VERIFIER: 'pkce_code_verifier',
@@ -271,29 +270,6 @@ function validateEnvironment(): void {
   }
 }
 
-// --- Funções PKCE ---
-function generateCodeVerifier(): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let result = '';
-  const charLength = charset.length;
-  
-  try {
-    const randomValues = window.crypto.getRandomValues(new Uint8Array(PKCE_VERIFIER_LENGTH));
-    for (let i = 0; i < PKCE_VERIFIER_LENGTH; i++) {
-      result += charset.charAt(randomValues[i] % charLength);
-    }
-    return result;
-  } catch (error) {
-    logger.error('Erro ao gerar code verifier', error);
-    throw new AuthError('Falha ao gerar code verifier', 'PKCE_GENERATION_FAILED', error);
-  }
-}
-
-function generateCodeChallenge(verifier: string): string {
-  // Para método 'plain', o code_challenge é igual ao code_verifier
-  return verifier;
-}
-
 // --- Validação de Estado ---
 function validateAuthState(receivedState: string, storedState: string | null): boolean {
   if (!receivedState || !storedState) {
@@ -493,16 +469,15 @@ export async function loginWithMal(): Promise<void> {
     logger.info('Iniciando processo de autenticação');
     storage.set(STORAGE_KEYS.AUTH_IN_PROGRESS, 'true');
     
-    // Gerar PKCE e state
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
-    const state = generateCodeVerifier();
+    // Gerar PKCE e state no Rust (criptografia S256 nativa segura)
+    const pkceData = await invoke<{ code_verifier: string; code_challenge: string; state: string }>('generate_pkce_challenge');
+    const { code_verifier: codeVerifier, code_challenge: codeChallenge, state } = pkceData;
     
     // Armazenar dados
     storage.set(STORAGE_KEYS.PKCE_VERIFIER, codeVerifier);
     storage.set(STORAGE_KEYS.PKCE_STATE, state);
     
-    logger.debug('PKCE gerado', {
+    logger.debug('PKCE gerado via Rust (S256)', {
       verifier: codeVerifier.substring(0, 20) + '...',
       challenge: codeChallenge.substring(0, 20) + '...',
       state: state.substring(0, 20) + '...'
@@ -536,7 +511,7 @@ export async function loginWithMal(): Promise<void> {
     authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.append('code_challenge', codeChallenge);
-    authUrl.searchParams.append('code_challenge_method', 'plain');
+    authUrl.searchParams.append('code_challenge_method', 'S256');
     
     logger.info('Abrindo navegador para autorização');
     await invoke('open_in_browser', { url: authUrl.toString() });

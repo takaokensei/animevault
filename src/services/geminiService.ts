@@ -1,32 +1,13 @@
 import { AnimeEntry } from '../types/anime';
-
-// API key must be set in .env as VITE_GEMINI_API_KEY
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
-
-if (!GEMINI_API_KEY) {
-  console.warn('[GeminiService] VITE_GEMINI_API_KEY not set in .env');
-}
+import { invoke } from './tauriService';
 
 export async function askGemini(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY) throw new Error('A API Key do Gemini não foi configurada no arquivo .env');
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    }
-  );
-  if (!res.ok) throw new Error(`Falha na requisição ao Gemini: ${res.status}`);
-  const data = await res.json();
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text ||
-    data.candidates?.[0]?.content?.text ||
-    "Sem resposta da IA"
-  );
+  try {
+    return await invoke<string>('generate_gemini_recommendations', { prompt });
+  } catch (error) {
+    console.error('[GeminiService] Erro ao obter recomendacao da IA:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
 }
 
 export interface AnimeRecommendation {

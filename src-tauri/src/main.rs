@@ -34,7 +34,10 @@ fn main() {
             commands::get_authenticated_user_profile,
             commands::get_authenticated_anime_list,
             commands::add_anime_to_list,
-            commands::remove_anime_from_list
+            commands::remove_anime_from_list,
+
+            // --- Comandos de IA ---
+            commands::generate_gemini_recommendations
         ])
         .run(tauri::generate_context!())
         .expect("Erro ao executar a aplicação Tauri");

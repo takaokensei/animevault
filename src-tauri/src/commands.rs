@@ -67,8 +67,14 @@ pub fn generate_pkce_challenge() -> PkceData {
         })
         .collect();
 
-    // Para o método "plain", o desafio é o próprio verificador.
-    let code_challenge = code_verifier.clone();
+    // Codificação S256 para o desafio PKCE
+    use sha2::{Sha256, Digest};
+    use base64::Engine;
+
+    let mut hasher = Sha256::new();
+    hasher.update(code_verifier.as_bytes());
+    let hash = hasher.finalize();
+    let code_challenge = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
 
     PkceData {
         code_verifier,
@@ -384,4 +390,51 @@ pub async fn remove_anime_from_list(token: String, anime_id: u32) -> Result<(), 
         return Err(format!("Erro ao remover anime: {} - {}", status, error_text));
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn generate_gemini_recommendations(prompt: String) -> Result<String, String> {
+    let api_key = std::env::var("GEMINI_API_KEY")
+        .map_err(|_| "Erro: A variável de ambiente GEMINI_API_KEY não está configurada no seu arquivo .env".to_string())?;
+    
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}",
+        api_key
+    );
+
+    let client = Client::builder()
+        .user_agent("AnimeVault/1.0.0 (Tauri Desktop App; Gemini Integration)")
+        .build()
+        .unwrap_or_else(|_| Client::new());
+
+    let payload = serde_json::json!({
+        "contents": [{ "parts": [{ "text": prompt }] }]
+    });
+
+    let res = client
+        .post(&url)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Erro ao conectar ao Gemini: {}", e))?;
+
+    let status = res.status();
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("Erro ao ler resposta do Gemini: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("Erro da API do Gemini: {} - {}", status, text));
+    }
+
+    // Parse do JSON da resposta do Gemini
+    let data: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Erro ao parsear JSON do Gemini: {}", e))?;
+
+    let generated_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .ok_or_else(|| "Sem resposta de texto válida da IA".to_string())?;
+
+    Ok(generated_text.to_string())
 }
