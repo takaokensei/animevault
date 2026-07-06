@@ -178,10 +178,10 @@ fastify.post('/sync', { preHandler: [authenticate] }, async (request: any, reply
   });
 });
 
-// Inicialização do Servidor SaaS na porta 1421 (conforme configurado nos Redirect URLs)
+// Inicialização do Servidor SaaS na porta 1422 (evitando conflito com o callback local do MAL na porta 1421)
 const start = async () => {
   try {
-    const port = parseInt(process.env.PORT || '1421', 10);
+    const port = parseInt(process.env.PORT || '1422', 10);
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Zenith SaaS Backend rodando em http://localhost:${port}`);
   } catch (err) {

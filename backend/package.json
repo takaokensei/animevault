@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
-    "@fastify/rate-limit": "^11.1.0",
+    "@fastify/rate-limit": "^8.1.1",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
