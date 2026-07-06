@@ -10,6 +10,7 @@ import { importarListaMALXml } from '../services/malImportService';
 import { toast } from 'react-toastify';
 import { ThemeSelector } from '../components/profile/ThemeSelector';
 import { GeminiRecommendations } from '../components/profile/GeminiRecommendations';
+import { SaasAccountCard } from '../components/profile/SaasAccountCard';
 import { 
   BookOpen, 
   Clock, 
@@ -202,6 +203,9 @@ export const ProfilePage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* ☁️ Status de Conta Zenith SaaS */}
+        <SaasAccountCard />
 
         {/* Estatísticas Rápidas */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
