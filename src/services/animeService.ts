@@ -2,6 +2,7 @@ import { getDb } from './database';
 import { malService, MalAnime } from './malService';
 import { authService } from './authService';
 import { AnimeEntry } from '../types/anime';
+import { syncService } from './syncService';
 
 
 export interface AnimeSearchResult {
@@ -62,6 +63,18 @@ export class AnimeService {
         JSON.stringify(anime.tags ?? [])
       ]
     );
+
+    // Registra modificação na fila de sincronização (Outbox Pattern)
+    await syncService.enqueueSyncEvent('UPSERT_ANIME', {
+      id: anime.id,
+      title: anime.title,
+      currentEpisode: anime.currentEpisode,
+      status: anime.status,
+      rating: anime.rating,
+      localPath: anime.localPath,
+      lastWatched: formatDbDate(anime.lastWatched),
+      notes: anime.notes
+    });
   }
 
   // Buscar animes do banco local
@@ -90,6 +103,9 @@ export class AnimeService {
   async removerAnime(id: string): Promise<void> {
     const db = await getDb();
     await db.execute('DELETE FROM animes WHERE id = ?', [id]);
+
+    // Registra remoção na fila de sincronização (Outbox Pattern)
+    await syncService.enqueueSyncEvent('DELETE_ANIME', { id });
   }
 
   // ===== OPERAÇÕES HÍBRIDAS (MAL + Local) =====

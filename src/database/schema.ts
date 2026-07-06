@@ -79,6 +79,18 @@ CREATE TABLE IF NOT EXISTS user_anime_list (
 );
 `;
 
+export const CREATE_SYNC_OUTBOX_TABLE = `
+CREATE TABLE IF NOT EXISTS sync_outbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  last_attempt TEXT,
+  status TEXT DEFAULT 'PENDING',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+`;
+
 // Índices para melhor performance
 export const CREATE_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_user_anime_list_user_id ON user_anime_list(user_id);
@@ -86,6 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_user_anime_list_anime_id ON user_anime_list(anime
 CREATE INDEX IF NOT EXISTS idx_user_anime_list_status ON user_anime_list(status);
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(status);
 `;
 
 // Script completo para criar todas as tabelas
@@ -94,5 +107,6 @@ ${CREATE_ANIME_TABLE}
 ${CREATE_USER_TABLE}
 ${CREATE_TOKENS_TABLE}
 ${CREATE_USER_ANIME_LIST_TABLE}
+${CREATE_SYNC_OUTBOX_TABLE}
 ${CREATE_INDEXES}
 `; 
