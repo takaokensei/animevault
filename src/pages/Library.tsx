@@ -9,11 +9,11 @@ import { LoginButton } from '../components/auth/LoginButton';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '../components/library/SearchFilters';
 import { LibraryGrid } from '../components/library/LibraryGrid';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
   const Library: React.FC = () => {
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
-    const [animes, setAnimes] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('all');
     const [genreFilter, setGenreFilter] = useState('all');
     const [sortBy, setSortBy] = useState('title');
@@ -29,8 +29,6 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
     const isScrollingProgrammatically = useRef(false);
     const lastScrollTop = useRef(0);
     const lastDocumentHeight = useRef(0);
-
-
 
     const isLoggedIn = useAuthStore((state: any) => state.isLoggedIn);
     const [syncError, setSyncError] = useState<string | null>(null);
@@ -50,29 +48,12 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
 
     const navigate = useNavigate();
 
-    // Função para buscar animes - será usada tanto no carregamento inicial quanto durante sync
-    const fetchLibrary = useCallback(async () => {
-      try {
-        const animesData = await animeService.buscarAnimes();
-        setAnimes(animesData);
-        return animesData;
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error('Erro ao buscar animes da biblioteca:', err);
-        setSyncError('Erro ao buscar animes da biblioteca: ' + errorMsg);
-        return [];
-      }
-    }, []);
-
-    // Carregamento inicial
-    const loadInitialData = useCallback(async () => {
-      setLoading(true);
-      try {
-        await fetchLibrary();
-      } finally {
-        setLoading(false);
-      }
-    }, [fetchLibrary]);
+    // Query do React Query contendo cacheamento nativo
+    const { data: animes = [], isLoading: loading } = useQuery({
+      queryKey: ['library'],
+      queryFn: () => animeService.buscarAnimes(),
+      enabled: isLoggedIn,
+    });
 
     // Reseta paginação quando filtros mudarem
     useEffect(() => {
@@ -156,7 +137,7 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
           setSyncSuccess('Biblioteca sincronizada com sucesso!');
           completeSync();
           localStorage.removeItem('syncState');
-          await fetchLibrary();
+          queryClient.invalidateQueries({ queryKey: ['library'] });
         }
       } catch (err: any) {
         // ========== MUDANÇA SECUNDÁRIA (Melhoria no Tratamento de Erro) ==========
@@ -168,7 +149,7 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
           console.log(`[Library] Sincronização interrompida intencionalmente: ${err.message}`);
         }
       }
-    }, [startSync, resumeSync, completeSync, setSyncProgress, fetchLibrary, isPaused, syncLoading]);
+    }, [startSync, resumeSync, completeSync, setSyncProgress, queryClient, isPaused, syncLoading]);
 
     const previousIsPaused = useRef(isPaused);
     
@@ -180,21 +161,14 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
       previousIsPaused.current = isPaused;
     }, [isPaused, syncLoading, handleSync]);
 
-    // Carregar dados iniciais
-    useEffect(() => {
-      if (isLoggedIn) {
-        loadInitialData();
-      }
-    }, [isLoggedIn, loadInitialData]);
-
     // Efeito para recarregar os animes reativamente conforme o progresso global avança
     const currentProgressIndex = useSyncFloatingStore(state => state.syncProgress?.current);
     
     useEffect(() => {
       if (syncLoading && currentProgressIndex !== undefined) {
-        fetchLibrary();
+        queryClient.invalidateQueries({ queryKey: ['library'] });
       }
-    }, [currentProgressIndex, syncLoading, fetchLibrary]);
+    }, [currentProgressIndex, syncLoading, queryClient]);
 
 
     // 2. SUBSTITUA SEU useEffect DE SCROLL ATUAL POR ESTE:
@@ -391,7 +365,7 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
           case 'rating':
             return (b.rating || 0) - (a.rating || 0);
           case 'episodes':
-            return (b.totalEpisodes || 0) - (a.totalEpisodes || 0);
+            return (b.episodes || 0) - (a.episodes || 0);
           case 'year':
             return (b.year || 0) - (a.year || 0);
           case 'status':

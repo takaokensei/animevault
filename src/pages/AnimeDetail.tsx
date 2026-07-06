@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 import { animeService } from '../services/animeService';
 import { LocalFileService } from '../services/localFileService';
 import { useLocalAnimeStore } from '../stores/localAnimeStore';
 import { FileEntry } from '../services/localFileService';
-import { AnimeEntry } from '../types/anime';
 import { 
   BookOpen, 
   AlertCircle,
@@ -37,15 +37,21 @@ const statusOptions: StatusOption[] = [
 const AnimeDetail: React.FC = (): JSX.Element => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [anime, setAnime] = useState<AnimeEntry | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isAddingToList, setIsAddingToList] = useState(false);
-
-
+  const [error, setError] = useState<string | null>(null);
 
   const animeId = id ? Number(id) : 0;
+
+  const { data: anime, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['anime', id],
+    queryFn: () => {
+      if (!id) throw new Error('ID do anime não encontrado');
+      return animeService.obterDetalhesAnime(id);
+    },
+    enabled: !!id,
+  });
+
   const {
     addFolder,
     addWatchedEpisode,
@@ -68,26 +74,11 @@ const AnimeDetail: React.FC = (): JSX.Element => {
     }
   }, [folderPath]);
 
+  // Seta erro de ID no boot
   useEffect(() => {
-    const fetchAnime = async () => {
-      if (!id) {
-        setError('ID do anime não encontrado');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const animeData = await animeService.obterDetalhesAnime(id);
-        setAnime(animeData);
-      } catch (err) {
-        setError('Erro ao carregar detalhes do anime');
-        console.error('Erro ao buscar anime:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnime();
+    if (!id) {
+      setError('ID do anime não encontrado');
+    }
   }, [id]);
 
 
@@ -161,7 +152,8 @@ const AnimeDetail: React.FC = (): JSX.Element => {
     );
   }
 
-  if (error || !anime) {
+  if (error || queryError || !anime) {
+    const displayError = error || (queryError instanceof Error ? queryError.message : String(queryError)) || 'Anime não encontrado';
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="text-center bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl max-w-md">
@@ -169,7 +161,7 @@ const AnimeDetail: React.FC = (): JSX.Element => {
             <AlertCircle className="w-16 h-16 text-white/50 animate-bounce" />
           </div>
           <h2 className="text-white text-2xl font-bold mb-2">Oops!</h2>
-          <p className="text-white/80 mb-6">{error || 'Anime não encontrado'}</p>
+          <p className="text-white/80 mb-6">{displayError}</p>
           <button
             onClick={() => navigate(-1)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
