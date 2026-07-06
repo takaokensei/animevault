@@ -1,4 +1,5 @@
 import { open, invoke, readDir } from './tauriService';
+import { extrairNumeroEpisodio, ordenarMidiaporNumero } from '../core/domain';
 
 export type FileEntry = {
   name?: string;
@@ -54,28 +55,13 @@ export class LocalFileService {
   }
 
   static findEpisodeNumber(filename: string): number | null {
-    const patterns = [
-      /[eE]p(?:isodio)?[\s._-]*(\d+)/i,
-      /[\s._-](\d{2,3})[\s._-]/,
-      /\[(\d{2,3})\]/,
-      /\((\d{2,3})\)/
-    ];
-
-    for (const pattern of patterns) {
-      const matches = filename.match(pattern);
-      if (matches) {
-        return parseInt(matches[1]);
-      }
-    }
-    return null;
+    return extrairNumeroEpisodio(filename);
   }
 
   static sortEpisodes(files: FileEntry[]): FileEntry[] {
-    return files.sort((a, b) => {
-      const numA = this.findEpisodeNumber(a.name || '') || 0;
-      const numB = this.findEpisodeNumber(b.name || '') || 0;
-      return numA - numB;
-    });
+    // Garantimos que a chave name exista ao passar para o domain puro
+    const mapped = files.map(f => ({ ...f, name: f.name || '' }));
+    return ordenarMidiaporNumero(mapped);
   }
 
   static matchEpisodeFiles(files: FileEntry[], episodeNumber: number): FileEntry[] {
