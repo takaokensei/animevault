@@ -18,6 +18,7 @@ fn main() {
             // --- Comandos Gerais ---
             commands::greet,
             commands::open_in_browser,
+            commands::check_file_exists,
 
             // --- Comandos de Autenticação ---
             commands::generate_pkce_challenge,

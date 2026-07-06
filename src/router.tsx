@@ -4,6 +4,7 @@ import AnimeDetail from './pages/AnimeDetail';
 import { ProfilePage } from './pages/ProfilePage';
 import { Sidebar } from './components/layout/Sidebar';
 import { CommandPalette } from './components/CommandPalette';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export function AppRouter() {
   return (
@@ -14,14 +15,27 @@ export function AppRouter() {
       {/* Paleta de Comandos Global dentro do contexto de rotas */}
       <CommandPalette />
 
-
       {/* Conteúdo principal com margem para a sidebar */}
       <main className="ml-20 min-h-screen">
-        <Routes>
-          <Route path="/" element={<Library />} />
-          <Route path="/anime/:id" element={<AnimeDetail />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={
+              <ErrorBoundary key="library">
+                <Library />
+              </ErrorBoundary>
+            } />
+            <Route path="/anime/:id" element={
+              <ErrorBoundary key="anime-detail">
+                <AnimeDetail />
+              </ErrorBoundary>
+            } />
+            <Route path="/profile" element={
+              <ErrorBoundary key="profile">
+                <ProfilePage />
+              </ErrorBoundary>
+            } />
+          </Routes>
+        </ErrorBoundary>
       </main>
     </BrowserRouter>
   );

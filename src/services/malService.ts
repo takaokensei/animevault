@@ -1,5 +1,3 @@
-// src/services/malService.ts
-
 import { invoke } from './tauriService';
 // Importe as ferramentas robustas do seu authService
 import { 
@@ -7,6 +5,11 @@ import {
   malApiRequest, 
   processBatch 
 } from './authService';
+import {
+  jikanSearchAnime,
+  jikanGetAnimeDetails,
+  jikanToMalAnime,
+} from './jikanService';
 
 
 // --- Interfaces (mantidas como estavam) ---
@@ -122,19 +125,37 @@ class MalService {
 
   // ===== CHAMADAS PÚBLICAS (sempre funcionam) =====
   // Todas as chamadas agora usam 'malApiRequest' para ganhar retries e rate limiting.
+  // Em caso de falha, fallback transparente para a Jikan API (open-source, sem auth).
 
   async searchAnime(query: string, limit = 20, offset = 0): Promise<MalSearchResult> {
-    return malApiRequest<MalSearchResult>(
-      () => invoke('mal_search_anime', { query, limit, offset }),
-      `Search Anime (${query})`
-    );
+    try {
+      return await malApiRequest<MalSearchResult>(
+        () => invoke('mal_search_anime', { query, limit, offset }),
+        `Search Anime (${query})`
+      );
+    } catch (err) {
+      // Fallback Jikan quando MAL rate-limited ou offline
+      console.warn(`[MalService] MAL falhou em searchAnime. Usando Jikan API como fallback. Erro:`, err);
+      const jikanResults = await jikanSearchAnime(query, limit);
+      return {
+        data: jikanResults.map(j => ({ node: jikanToMalAnime(j) as MalAnime })),
+        paging: {},
+      };
+    }
   }
 
   async getAnimeDetails(animeId: number): Promise<MalAnime> {
-    return malApiRequest<MalAnime>(
-      () => invoke('get_anime_details', { animeId }),
-      `Get Anime Details (${animeId})`
-    );
+    try {
+      return await malApiRequest<MalAnime>(
+        () => invoke('get_anime_details', { animeId }),
+        `Get Anime Details (${animeId})`
+      );
+    } catch (err) {
+      // Fallback Jikan quando MAL rate-limited ou offline
+      console.warn(`[MalService] MAL falhou em getAnimeDetails(${animeId}). Usando Jikan API como fallback. Erro:`, err);
+      const jikanData = await jikanGetAnimeDetails(animeId);
+      return jikanToMalAnime(jikanData) as MalAnime;
+    }
   }
 
   // ===== CHAMADAS AUTENTICADAS (requerem login) =====

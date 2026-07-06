@@ -46,11 +46,24 @@ export class LocalFileService {
   }
 
   // ... (seus outros métodos como playVideo, findEpisodeNumber, etc. continuam os mesmos)
-  static async playVideo(filePath: string) {
+  static async playVideo(filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Verifica se o arquivo ainda existe físicamente antes de chamar o player
+      // Evita erros silenciosos de arquivos movidos ou deletados
+      const exists = await invoke<boolean>('check_file_exists', { path: filePath });
+
+      if (!exists) {
+        const msg = `Arquivo não encontrado: ${filePath}`;
+        console.warn(`[LocalFileService] ${msg}`);
+        return { success: false, error: 'Arquivo de vídeo não encontrado. Ele pode ter sido movido ou deletado.' };
+      }
+
       await invoke('plugin:shell|open', { path: filePath });
+      return { success: true };
     } catch (error) {
-      console.error('Erro ao reproduzir vídeo:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[LocalFileService] Erro ao reproduzir vídeo:', msg);
+      return { success: false, error: `Falha ao abrir o player: ${msg}` };
     }
   }
 

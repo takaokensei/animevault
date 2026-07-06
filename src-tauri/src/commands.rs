@@ -39,6 +39,16 @@ pub fn open_in_browser(url: String) -> Result<(), String> {
     }
 }
 
+/// Verifica se um arquivo existe fisicamente no disco antes de tentar reproduzi-lo.
+/// Retorna false silenciosamente para caminhos vazios ou inválidos.
+#[tauri::command]
+pub fn check_file_exists(path: String) -> bool {
+    if path.is_empty() {
+        return false;
+    }
+    std::path::Path::new(&path).exists()
+}
+
 // --- Comandos de Autenticação ---
 
 #[derive(Serialize)]
