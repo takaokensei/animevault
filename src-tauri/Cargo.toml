@@ -27,4 +27,4 @@ base64 = "0.22.1"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 dotenvy = "0.15"
-
+chrono = { version = "0.4", features = ["serde"] }

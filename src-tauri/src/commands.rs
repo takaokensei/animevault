@@ -440,7 +440,7 @@ pub async fn generate_gemini_recommendations(prompt: String) -> Result<String, S
 }
 
 #[tauri::command]
-pub async fn sync_to_saas_db(action: String, payload: String) -> Result<bool, String> {
+pub async fn sync_to_saas_db(token: String, action: String, payload: String) -> Result<bool, String> {
     let saas_url = match std::env::var("ZENITH_SAAS_API_URL") {
         Ok(url) => url,
         Err(_) => {
@@ -466,12 +466,16 @@ pub async fn sync_to_saas_db(action: String, payload: String) -> Result<bool, St
         .map_err(|e| format!("JSON de payload invalido: {}", e))?;
 
     let body = serde_json::json!({
-        "action": action,
-        "payload": payload_json
+        "events": [{
+            "action": action,
+            "payload": payload_json,
+            "timestamp": new_timestamp()
+        }]
     });
 
     let res = client
         .post(&url)
+        .bearer_auth(token)
         .json(&body)
         .send()
         .await
@@ -484,4 +488,11 @@ pub async fn sync_to_saas_db(action: String, payload: String) -> Result<bool, St
         let err_text = res.text().await.unwrap_or_else(|_| "N/A".to_string());
         Err(format!("Erro retornado pelo SaaS ({}): {}", status, err_text))
     }
+}
+
+// Helper para gerar timestamp ISO no formato esperado pela reconciliação
+fn new_timestamp() -> String {
+    let now = std::time::SystemTime::now();
+    let datetime: chrono::DateTime<chrono::Utc> = now.into();
+    datetime.to_rfc3339()
 }
