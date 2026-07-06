@@ -1,0 +1,680 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+
+import { animeService } from '../services/animeService';
+import { LocalFileService } from '../services/localFileService';
+import { useLocalAnimeStore } from '../stores/localAnimeStore';
+import { FileEntry } from '../services/localFileService';
+import { AnimeEntry } from '../types/anime';
+import Lightbox from 'yet-another-react-lightbox';
+import Zoom from 'yet-another-react-lightbox/plugins/zoom';
+import 'yet-another-react-lightbox/styles.css';
+import { 
+  BookOpen, 
+  Image as ImageIcon, 
+  FolderOpen, 
+  BarChart2, 
+  FileText, 
+  AlertCircle,
+  Sparkles
+} from 'lucide-react';
+
+
+
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+interface StatusOption {
+  value: string;
+  label: string;
+  icon: string;
+}
+
+const statusOptions: StatusOption[] = [
+  { value: 'watching', label: 'Assistindo', icon: '▶️' },
+  { value: 'completed', label: 'Completo', icon: '✅' },
+  { value: 'on_hold', label: 'Em Pausa', icon: '⏸️' },
+  { value: 'dropped', label: 'Desistiu', icon: '🗑️' },
+  { value: 'plan_to_watch', label: 'Planejo Assistir', icon: '🗓️' }
+];
+
+const formatScore = (score: number | undefined) => {
+  if (score === undefined || score === null) return 'N/A';
+  return score.toFixed(2);
+}
+
+const formatNumber = (num: number | undefined) => {
+  if (num === undefined || num === null) return 'N/A';
+  return new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short' }).format(num);
+};
+
+const formatDuration = (minutes: number | undefined) => {
+  if (minutes === undefined || minutes === null) return 'N/A';
+  return `${minutes} min`;
+};
+
+const AnimeDetail: React.FC = (): JSX.Element => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [anime, setAnime] = useState<AnimeEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [isAddingToList, setIsAddingToList] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+
+  const animeId = id ? Number(id) : 0;
+  const {
+    addFolder,
+    addWatchedEpisode,
+    removeWatchedEpisode,
+    isEpisodeWatched,
+    getFolder
+  } = useLocalAnimeStore();
+
+  const [videoFiles, setVideoFiles] = useState<FileEntry[]>([]);
+  const folder = getFolder(animeId);
+  const folderPath = folder?.folderPath;
+  
+  useEffect(() => {
+    if (folderPath) {
+      LocalFileService.listVideoFiles(folderPath)
+        .then(files => setVideoFiles(LocalFileService.sortEpisodes(files)))
+        .catch(console.error);
+    } else {
+      setVideoFiles([]);
+    }
+  }, [folderPath]);
+
+  useEffect(() => {
+    const fetchAnime = async () => {
+      if (!id) {
+        setError('ID do anime não encontrado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const animeData = await animeService.obterDetalhesAnime(id);
+        setAnime(animeData);
+      } catch (err) {
+        setError('Erro ao carregar detalhes do anime');
+        console.error('Erro ao buscar anime:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnime();
+  }, [id]);
+
+  // Lightbox handlers
+  const openScreenshotModal = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+
+  const handleAddToList = async (status: string) => {
+    setIsAddingToList(true);
+    try {
+      if (anime && animeId) {
+        await animeService.adicionarAnimeALista(String(animeId), status);
+        toast.success('Anime adicionado à sua lista!');
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar anime à lista:', err);
+      toast.error('Erro ao adicionar anime à lista');
+    } finally {
+      setIsAddingToList(false);
+      setShowStatusMenu(false);
+    }
+  };
+
+  const handleSelectFolder = async () => {
+    try {
+      const selectedPath = await LocalFileService.selectFolder();
+      if (selectedPath && typeof selectedPath === 'string') {
+        addFolder(animeId, selectedPath);
+        const files = await LocalFileService.listVideoFiles(selectedPath);
+        setVideoFiles(LocalFileService.sortEpisodes(files));
+        toast.success('Pasta associada com sucesso!');
+      }
+    } catch (err) {
+      console.error('Erro ao selecionar pasta:', err);
+      toast.error('Erro ao selecionar pasta');
+    }
+  };
+
+  const handlePlayEpisode = async (file: FileEntry) => {
+    try {
+      await LocalFileService.playVideo(file.path ?? '');
+      const episodeNumber = LocalFileService.findEpisodeNumber(file.name || '');
+      if (episodeNumber && typeof addWatchedEpisode === 'function') {
+        addWatchedEpisode(Number(animeId), episodeNumber);
+      }
+    } catch (err) {
+      console.error('Erro ao reproduzir episódio:', err);
+      toast.error('Erro ao reproduzir episódio');
+    }
+  };
+
+  const handleToggleWatched = (episodeNumber: number) => {
+    if (typeof isEpisodeWatched === 'function' && typeof removeWatchedEpisode === 'function' && typeof addWatchedEpisode === 'function') {
+      if (isEpisodeWatched(Number(animeId), episodeNumber)) {
+        removeWatchedEpisode(Number(animeId), episodeNumber);
+      } else {
+        addWatchedEpisode(Number(animeId), episodeNumber);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mb-4"></div>
+            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-t-purple-400 animate-spin" style={{ animationDelay: '0.5s' }}></div>
+          </div>
+          <p className="text-white text-lg font-medium">Carregando detalhes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !anime) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="text-center bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl max-w-md">
+          <div className="flex justify-center mb-4">
+            <AlertCircle className="w-16 h-16 text-white/50 animate-bounce" />
+          </div>
+          <h2 className="text-white text-2xl font-bold mb-2">Oops!</h2>
+          <p className="text-white/80 mb-6">{error || 'Anime não encontrado'}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative">
+      {/* Hero Section */}
+      <div className="relative h-[500px] overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src={anime.bannerImage || anime.coverImage || '/placeholder-banner.jpg'}
+            alt={anime.title}
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60"></div>
+        </div>
+        
+        {/* Floating Navigation */}
+        <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-black/30 hover:bg-black/50 backdrop-blur-md text-white p-3 rounded-full transition-all duration-200 border border-white/20 hover:scale-110 shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center space-x-3">
+            <button className="bg-black/30 hover:bg-black/50 backdrop-blur-md text-white p-3 rounded-full transition-all duration-200 border border-white/20 hover:scale-110">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+            <button className="bg-black/30 hover:bg-black/50 backdrop-blur-md text-white p-3 rounded-full transition-all duration-200 border border-white/20 hover:scale-110">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-start lg:items-end space-y-6 lg:space-y-0 lg:space-x-8">
+              {/* Poster */}
+              <div className="flex-shrink-0 relative group">
+                <img
+                  src={anime.coverImage || '/placeholder.png'}
+                  alt={anime.title}
+                  className="w-56 h-80 object-cover rounded-2xl shadow-2xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
+              
+              {/* Info */}
+              <div className="flex-1 text-white space-y-4">
+                <div>
+                  <h1 className="text-4xl lg:text-6xl font-bold mb-2 drop-shadow-lg bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+                    {anime.title}
+                  </h1>
+                  {anime.alternativeTitles && (
+                    <p className="text-lg text-white/80 mb-4 drop-shadow-md font-medium">
+                      {anime.alternativeTitles[0] || ''}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Enhanced Quick Stats */}
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  {anime.rating && (
+                    <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-yellow-400/30">
+                      <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span className="font-bold text-yellow-100">{formatScore(anime.rating)}</span>
+                    </div>
+                  )}
+                  {anime.year && (
+                    <span className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium border border-white/20">
+                      {anime.year}
+                    </span>
+                  )}
+                  {anime.status && (
+                    <span className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium border border-green-400/30">
+                      {anime.status}
+                    </span>
+                  )}
+                  {anime.episodes && (
+                    <span className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium border border-blue-400/30">
+                      {anime.episodes} eps
+                    </span>
+                  )}
+                </div>
+                
+                {/* Genres */}
+                {anime.genres && anime.genres.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {anime.genres.map((genre: string, index: number) => (
+                      <span 
+                        key={genre} 
+                        className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm border border-white/20 hover:scale-105 transition-transform duration-200 font-medium"
+                        style={{ 
+                          animationDelay: `${index * 0.1}s`,
+                          animation: 'fadeInUp 0.5s ease-out forwards'
+                        }}
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Enhanced Add to List Button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  disabled={isAddingToList}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-medium transition-all duration-200 border border-white/20 disabled:opacity-50 flex items-center space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  {isAddingToList ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
+                      <span>Adicionando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Adicionar à Lista</span>
+                    </>
+                  )}
+                </button>
+                
+                {/* Enhanced Status Menu */}
+                {showStatusMenu && (
+                  <div className="absolute right-0 top-full mt-3 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl z-50 border border-white/20 overflow-hidden">
+                    <div className="p-2">
+                      {statusOptions.map((option, index) => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleAddToList(option.value)}
+                          disabled={isAddingToList}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100/80 disabled:opacity-50 flex items-center space-x-3 transition-all duration-200 rounded-xl hover:scale-105"
+                          style={{ animationDelay: `${index * 0.05}s` }}
+                        >
+                          <span className="text-xl">{option.icon}</span>
+                          <span className="font-medium">{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Info */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Synopsis */}
+            {anime.synopsis && (
+              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300">
+                <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+                  <BookOpen className="w-8 h-8 text-violet-400" />
+                  <span>Sinopse</span>
+                </h2>
+                <p className="text-white/90 leading-relaxed text-lg font-medium">
+                  {anime.synopsis}
+                </p>
+              </div>
+            )}
+            
+            {/* Enhanced Screenshots */}
+            {anime.screenshots && anime.screenshots.length > 0 && (
+              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+                <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+                  <ImageIcon className="w-8 h-8 text-violet-400" />
+                  <span>Screenshots</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {anime.screenshots.map((screenshot: string, index: number) => (
+                    <div
+                      key={index}
+                      className="relative group cursor-pointer rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-all duration-300"
+                      onClick={() => openScreenshotModal(index)}
+                    >
+                      <img
+                        src={screenshot}
+                        alt={`Screenshot ${index + 1}`}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Enhanced Sidebar */}
+          <div className="space-y-6">
+            {/* Stats Overview */}
+            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <BarChart2 className="w-5 h-5 text-violet-400" />
+                <span>Estatísticas</span>
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/10 rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-white">{formatScore(anime.rating)}</div>
+                  <div className="text-white/60 text-sm">Nota</div>
+                </div>
+                <div className="bg-white/10 rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-white">{anime.episodes || 'N/A'}</div>
+                  <div className="text-white/60 text-sm">Episódios</div>
+                </div>
+                <div className="bg-white/10 rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-white">{anime.year || 'N/A'}</div>
+                  <div className="text-white/60 text-sm">Ano</div>
+                </div>
+                <div className="bg-white/10 rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-white">{anime.popularity ? formatNumber(anime.popularity) : 'N/A'}</div>
+                  <div className="text-white/60 text-sm">Popularidade</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced Details */}
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-violet-400" />
+                <span>Detalhes</span>
+              </h2>
+              <div className="space-y-4">
+                {anime.media_type && (
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-white/60">Tipo:</span>
+                    <span className="text-white font-medium bg-blue-500/20 px-3 py-1 rounded-full text-sm">{anime.media_type}</span>
+                  </div>
+                )}
+                {anime.average_episode_duration && (
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-white/60">Duração:</span>
+                    <span className="text-white font-medium">{formatDuration(Number(anime.average_episode_duration))}</span>
+                  </div>
+                )}
+                {anime.studios && anime.studios.length > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-white/60">Studio:</span>
+                    <span className="text-white font-medium">{anime.studios.map((s: any) => s.name).join(', ')}</span>
+                  </div>
+                )}
+                {anime.source && (
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-white/60">Fonte:</span>
+                    <span className="text-white font-medium">{anime.source}</span>
+                  </div>
+                )}
+                {anime.user_score && (
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-white/60">Sua Nota:</span>
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span className="text-white font-medium">{formatScore(anime.user_score)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {anime.related_anime && anime.related_anime.length > 0 && (
+              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-violet-400" />
+                  <span>Relacionados</span>
+                </h2>
+                <div className="space-y-4">
+                  {anime.related_anime.slice(0, 5).map((related: any, index: number) => (
+                    <div key={index} className="flex items-center space-x-4 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors duration-200 cursor-pointer" onClick={() => navigate(`/anime/${related.node.id}`)}>
+                      <img
+                        src={related.node?.main_picture?.medium || related.node?.main_picture?.large || '/placeholder.png'}
+                        alt={related.node?.title}
+                        className="w-14 h-20 object-cover rounded-lg shadow-md"
+                      />
+                      <div className="flex-1">
+                        <p className="text-white font-medium text-sm line-clamp-2 mb-1">
+                          {related.node?.title}
+                        </p>
+                        <p className="text-white/60 text-xs bg-purple-500/20 px-2 py-1 rounded-full inline-block">
+                          {related.relation_type_formatted || related.relation_type}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-6 pb-12">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+              <FolderOpen className="w-8 h-8 text-violet-400" />
+              <span>Arquivos Locais</span>
+            </h2>
+            <button
+              onClick={handleSelectFolder}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>{folderPath ? 'Alterar Pasta' : 'Associar Pasta'}</span>
+            </button>
+          </div>
+          
+          {folderPath ? (
+            videoFiles.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {videoFiles.map((file, idx) => {
+                  const episodeNumber = LocalFileService.findEpisodeNumber(file.name || '');
+                  const isWatched = episodeNumber ? isEpisodeWatched(animeId, episodeNumber) : false;
+                  
+                  // Selecionar imagem de fundo baseada nas screenshots do anime
+                  let cardBgImage = anime.coverImage || '/placeholder.png';
+                  if (anime.screenshots && anime.screenshots.length > 0) {
+                    const screenshotIdx = episodeNumber 
+                      ? (episodeNumber - 1) % anime.screenshots.length 
+                      : idx % anime.screenshots.length;
+                    cardBgImage = anime.screenshots[screenshotIdx];
+                  }
+
+                  // Nome do episódio formatado sem tags de fansubbers
+                  const cleanTitle = file.name 
+                    ? file.name.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').replace(/\.[^/.]+$/, '').trim()
+                    : 'Episódio';
+
+                  return (
+                    <div
+                      key={file.path}
+                      className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#161B22] aspect-video group cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-violet-500/50 hover:scale-[1.03]"
+                      onClick={() => handlePlayEpisode(file)}
+                    >
+                      {/* Imagem de Fundo do Episódio */}
+                      <img 
+                        src={cardBgImage} 
+                        alt={cleanTitle}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      
+                      {/* Gradiente Escuro de Fundo */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/50 z-10" />
+
+                      {/* Círculo superior esquerdo de visto */}
+                      <div className="absolute top-3 left-3 z-20 flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (episodeNumber) handleToggleWatched(episodeNumber);
+                          }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-90 ${
+                            isWatched 
+                              ? 'bg-green-500 border-green-400 text-white shadow-lg shadow-green-500/20' 
+                              : 'bg-black/50 border-white/20 text-white/70 hover:bg-black/75 hover:text-white'
+                          }`}
+                          title={isWatched ? 'Marcar como não assistido' : 'Marcar como assistido'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Botão de Play centralizado */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div className="w-12 h-12 rounded-full bg-violet-600/90 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                          <svg className="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Metadados inferiores do Episódio */}
+                      <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-col justify-end">
+                        <h3 className="text-[10px] font-bold tracking-widest text-violet-400 uppercase">
+                          Episódio {episodeNumber || (idx + 1)}
+                        </h3>
+                        <p className="text-white text-xs font-semibold mt-0.5 truncate drop-shadow-md" title={cleanTitle}>
+                          {cleanTitle}
+                        </p>
+                      </div>
+
+                      {/* Barra de progresso inferior discreta */}
+                      {isWatched && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-500 z-20" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center text-white/60 py-8">
+                <p className="text-lg mb-2">Nenhum arquivo de vídeo encontrado nesta pasta</p>
+                <p className="text-sm">Certifique-se de que os arquivos de vídeo (.mp4, .mkv, etc.) estão na pasta selecionada.</p>
+              </div>
+            )
+          ) : (
+            <div className="text-center text-white/60 py-8">
+              <p className="text-lg mb-2">Nenhuma pasta associada</p>
+              <p className="text-sm">Clique em "Associar Pasta" para selecionar a pasta com os episódios deste anime.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {anime.screenshots && anime.screenshots.length > 0 && (
+        <Lightbox
+          open={lightboxOpen}
+          close={() => setLightboxOpen(false)}
+          index={lightboxIndex}
+          slides={anime.screenshots.map(src => ({ src }))}
+          plugins={[Zoom]}
+        />
+      )}
+      
+      {showStatusMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowStatusMenu(false)}
+        ></div>
+      )}
+      
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default AnimeDetail;

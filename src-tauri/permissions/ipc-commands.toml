@@ -1,0 +1,28 @@
+# Permissão para todos os comandos IPC customizados da aplicação
+[[permission]]
+identifier = "allow-ipc"
+description = "Permite a execução de todos os comandos IPC necessários para a aplicação."
+commands.allow = [
+  "greet",
+  "open_in_browser",
+  "generate_pkce_challenge",
+  "start_auth_server",
+  "mal_exchange_code_for_token",
+  "exchange_code_for_token",
+  "mal_get_authenticated_user_profile",
+  "get_authenticated_user_profile",
+  "mal_get_user",
+  "get_user",
+  "mal_get_anime_list",
+  "get_anime_list",
+  "mal_search_anime",
+  "search_anime",
+  "mal_get_anime_details",
+  "get_anime_details",
+  "mal_get_authenticated_anime_list",
+  "get_authenticated_anime_list",
+  "mal_add_anime_to_list",
+  "add_anime_to_list",
+  "mal_remove_anime_from_list",
+  "remove_anime_from_list"
+]

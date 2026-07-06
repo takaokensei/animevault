@@ -1,0 +1,228 @@
+/* ─── AnimeVault Global Styles ────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Aplicação de Outfit nos Headings */
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Outfit', sans-serif !important;
+  letter-spacing: -0.015em;
+}
+
+:root {
+
+
+  /* Design tokens */
+  --bg-primary:    #080B14;
+  --bg-secondary:  #0D1117;
+  --bg-surface:    #161B22;
+  --bg-elevated:   #1E2530;
+
+  --accent-violet: #7C3AED;
+  --accent-blue:   #3B82F6;
+  --accent-indigo: #4F46E5;
+
+  --text-primary:  #E6EDF3;
+  --text-secondary:#8D96A0;
+  --text-muted:    #484F58;
+
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-medium: rgba(255,255,255,0.12);
+
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Temas Visuais Customizáveis (SaaS Style) ────────────────────────────── */
+
+:root[data-theme='tokyo-night'] {
+  --bg-primary:    #1a1b26;
+  --bg-secondary:  #16161e;
+  --bg-surface:    #1f2335;
+  --bg-elevated:   #24283b;
+
+  --accent-violet: #bb9af7;
+  --accent-blue:   #7aa2f7;
+  --accent-indigo: #89ddff;
+
+  --text-primary:  #c0caf5;
+  --text-secondary:#a9b1d6;
+  --text-muted:    #565f89;
+
+  --border-subtle: rgba(187, 154, 247, 0.1);
+  --border-medium: rgba(187, 154, 247, 0.25);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+:root[data-theme='vampiric'] {
+  --bg-primary:    #0a0505;
+  --bg-secondary:  #120909;
+  --bg-surface:    #1d0f0f;
+  --bg-elevated:   #261616;
+
+  --accent-violet: #e11d48; /* Carmesim */
+  --accent-blue:   #be123c;
+  --accent-indigo: #fda4af;
+
+  --text-primary:  #ffe4e6;
+  --text-secondary:#fda4af;
+  --text-muted:    #9f1239;
+
+  --border-subtle: rgba(225, 29, 72, 0.15);
+  --border-medium: rgba(225, 29, 72, 0.3);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+:root[data-theme='dracula'] {
+  --bg-primary:    #1e1f29;
+  --bg-secondary:  #282a36;
+  --bg-surface:    #343746;
+  --bg-elevated:   #44475a;
+
+  --accent-violet: #bd93f9;
+  --accent-blue:   #8be9fd;
+  --accent-indigo: #ff79c6;
+
+  --text-primary:  #f8f8f2;
+  --text-secondary:#6272a4;
+  --text-muted:    #44475a;
+
+  --border-subtle: rgba(189, 147, 249, 0.15);
+  --border-medium: rgba(189, 147, 249, 0.3);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+:root[data-theme='swiss-light'] {
+  --bg-primary:    #f5f5f7;
+  --bg-secondary:  #ffffff;
+  --bg-surface:    #e5e5ea;
+  --bg-elevated:   #d1d1d6;
+
+  --accent-violet: #000000;
+  --accent-blue:   #007aff;
+  --accent-indigo: #5856d6;
+
+  --text-primary:  #1c1c1e;
+  --text-secondary:#8e8e93;
+  --text-muted:    #c7c7cc;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.16);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+
+/* Reset agressivo para remover estilos padrão do Tauri/Vite */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Sobrescreve os estilos genéricos de button/input do template original */
+input,
+button {
+  border-radius: unset;
+  border: none;
+  padding: unset;
+  font-size: unset;
+  font-weight: unset;
+  font-family: inherit;
+  color: inherit;
+  background-color: transparent;
+  transition: none;
+  box-shadow: none;
+  outline: none;
+  cursor: pointer;
+}
+
+button:hover,
+button:active {
+  border-color: transparent;
+  background-color: transparent;
+}
+
+a {
+  color: var(--accent-violet);
+  text-decoration: none;
+}
+
+a:hover {
+  color: #9d6ffe;
+}
+
+/* ─── Scrollbar custom ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.7);
+}
+
+/* ─── Utilities ────────────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(22, 27, 34, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-strong {
+  background: rgba(13, 17, 23, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-medium);
+}
+
+/* Gradient text utility */
+.text-gradient {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Pulse animation for loading states */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #1E2530 25%, #2A3444 50%, #1E2530 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

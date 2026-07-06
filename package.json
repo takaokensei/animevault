@@ -1,0 +1,49 @@
+{
+  "name": "animevault",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.4",
+    "@tanstack/react-query": "^5.81.5",
+    "@tauri-apps/api": "^2.6.0",
+    "@tauri-apps/plugin-dialog": "^2.3.0",
+    "@tauri-apps/plugin-fs": "^2.4.1",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-shell": "^2.3.0",
+    "@tauri-apps/plugin-sql": "^2.3.0",
+    "axios": "^1.10.0",
+    "better-sqlite3": "^12.2.0",
+    "cors-anywhere": "^0.4.4",
+    "framer-motion": "^12.23.3",
+    "fuse.js": "^7.1.0",
+    "lucide-react": "^0.525.0",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.6.3",
+    "react-toastify": "^11.0.5",
+    "tailwindcss": "^3.4.3",
+    "yet-another-react-lightbox": "^3.32.0",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "playwright": "^1.61.1",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3"
+  }
+}

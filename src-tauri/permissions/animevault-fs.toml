@@ -1,0 +1,10 @@
+[[set]]
+identifier = "animevault-fs-access"
+description = "Permite ler diretórios e verificar a existência de arquivos nas pastas de mídia do usuário."
+permissions = [
+  "fs:allow-read-dir",
+  "fs:allow-exists",
+  "fs:scope-video-recursive",
+  "fs:scope-download-recursive",
+  "fs:scope-desktop-recursive"
+]

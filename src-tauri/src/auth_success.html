@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Autenticação Bem-sucedida</title>
+                    <style>
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                
+                        body {
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-height: 100vh;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            color: #333;
+                        }
+                
+                        .container {
+                            background: white;
+                            border-radius: 20px;
+                            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                            padding: 3rem;
+                            text-align: center;
+                            max-width: 500px;
+                            width: 90%;
+                            position: relative;
+                            overflow: hidden;
+                        }
+                
+                        .container::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            height: 5px;
+                            background: linear-gradient(90deg, #4CAF50, #45a049);
+                        }
+                
+                        .success-icon {
+                            width: 80px;
+                            height: 80px;
+                            margin: 0 auto 1.5rem;
+                            background: linear-gradient(135deg, #4CAF50, #45a049);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            animation: bounce 0.8s ease-out;
+                        }
+                
+                        .success-icon svg {
+                            width: 40px;
+                            height: 40px;
+                            fill: white;
+                        }
+                
+                        @keyframes bounce {
+                            0%, 20%, 50%, 80%, 100% {
+                                transform: translateY(0);
+                            }
+                            40% {
+                                transform: translateY(-10px);
+                            }
+                            60% {
+                                transform: translateY(-5px);
+                            }
+                        }
+                
+                        h1 {
+                            color: #2c3e50;
+                            font-size: 2.2rem;
+                            margin-bottom: 1rem;
+                            font-weight: 700;
+                        }
+                
+                        .subtitle {
+                            color: #7f8c8d;
+                            font-size: 1.1rem;
+                            margin-bottom: 2rem;
+                            line-height: 1.6;
+                        }
+                
+                        .close-button {
+                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            color: white;
+                            border: none;
+                            padding: 12px 30px;
+                            border-radius: 25px;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            font-weight: 600;
+                            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                        }
+                
+                        .close-button:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+                        }
+                
+                        .close-button:active {
+                            transform: translateY(0);
+                        }
+                
+                        .decorative-elements {
+                            position: absolute;
+                            width: 100%;
+                            height: 100%;
+                            top: 0;
+                            left: 0;
+                            pointer-events: none;
+                            overflow: hidden;
+                        }
+                
+                        .circle {
+                            position: absolute;
+                            border-radius: 50%;
+                            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+                            animation: float 6s ease-in-out infinite;
+                        }
+                
+                        .circle:nth-child(1) {
+                            width: 60px;
+                            height: 60px;
+                            top: 20%;
+                            left: 10%;
+                            animation-delay: 0s;
+                        }
+                
+                        .circle:nth-child(2) {
+                            width: 40px;
+                            height: 40px;
+                            top: 60%;
+                            right: 15%;
+                            animation-delay: 2s;
+                        }
+                
+                        .circle:nth-child(3) {
+                            width: 30px;
+                            height: 30px;
+                            bottom: 20%;
+                            left: 20%;
+                            animation-delay: 4s;
+                        }
+                
+                        @keyframes float {
+                            0%, 100% {
+                                transform: translateY(0px);
+                            }
+                            50% {
+                                transform: translateY(-20px);
+                            }
+                        }
+                
+                        .success-message {
+                            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+                            border: 1px solid #c3e6cb;
+                            border-radius: 10px;
+                            padding: 1rem;
+                            margin: 1.5rem 0;
+                            color: #155724;
+                            font-weight: 500;
+                        }
+                
+                        @media (max-width: 480px) {
+                            .container {
+                                padding: 2rem;
+                            }
+                            
+                            h1 {
+                                font-size: 1.8rem;
+                            }
+                            
+                            .subtitle {
+                                font-size: 1rem;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="decorative-elements">
+                            <div class="circle"></div>
+                            <div class="circle"></div>
+                            <div class="circle"></div>
+                        </div>
+                        
+                        <div class="success-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                            </svg>
+                        </div>
+                        
+                        <h1>Autenticação Bem-sucedida!</h1>
+                        
+                        <div class="success-message">
+                            ✅ Login realizado com sucesso
+                        </div>
+                        
+                        <p class="subtitle">
+                            Sua autenticação foi concluída com êxito. Você pode fechar esta aba do navegador agora e continuar usando o aplicativo.
+                        </p>
+                        
+                        <button class="close-button" onclick="closeTab()">
+                            Fechar Aba
+                        </button>
+                    </div>
+                
+                    <script>
+                        function closeTab() {
+                            // Tenta fechar a aba atual
+                            if (window.opener) {
+                                window.close();
+                            } else {
+                                // Se não conseguir fechar, mostra uma mensagem
+                                alert('Você pode fechar esta aba manualmente agora.');
+                            }
+                        }
+                
+                        // Adiciona um pequeno delay para garantir que a animação seja vista
+                        setTimeout(() => {
+                            const container = document.querySelector('.container');
+                            container.style.animation = 'fadeIn 0.5s ease-out';
+                        }, 100);
+                
+                        // Adiciona a animação de fade in
+                        const style = document.createElement('style');
+                        style.textContent = `
+                            @keyframes fadeIn {
+                                from { opacity: 0; transform: translateY(20px); }
+                                to { opacity: 1; transform: translateY(0); }
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    </script>
+                </body>
+                </html>

@@ -1,0 +1,40 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Define as permissões para a janela principal do AnimeVault.",
+  "windows": ["main"],
+  "permissions": [
+    "dialog:allow-open",
+    "shell:allow-open",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:window:allow-set-title",
+    "allow-ipc",
+    "fs:read-all",
+    {
+      "identifier": "fs:allow-create",
+
+      "allow": [{ "path": "$APP/mal_tokens.json" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$APP/mal_tokens.json" }]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$APP/mal_tokens.json" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$APP/**" }]
+    }
+  ]
+}
