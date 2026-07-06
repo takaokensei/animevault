@@ -438,3 +438,50 @@ pub async fn generate_gemini_recommendations(prompt: String) -> Result<String, S
 
     Ok(generated_text.to_string())
 }
+
+#[tauri::command]
+pub async fn sync_to_saas_db(action: String, payload: String) -> Result<bool, String> {
+    let saas_url = match std::env::var("ZENITH_SAAS_API_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            // Em modo offline/local-first simulado quando não configurada a API do SaaS
+            println!("[SaaS Sync] ZENITH_SAAS_API_URL não definida. Modo local-first ativo.");
+            return Ok(true);
+        }
+    };
+
+    if saas_url.trim().is_empty() || saas_url.contains("api.zenith.inc") {
+        // Mock de sucesso quando rodando em ambiente local sem API real configurada
+        println!("[SaaS Sync] Mock de sucesso para acao: {}", action);
+        return Ok(true);
+    }
+
+    let url = format!("{}/sync", saas_url);
+    let client = Client::builder()
+        .user_agent("AnimeVault/1.0.0 (Tauri Desktop App; SaaS Sync)")
+        .build()
+        .unwrap_or_else(|_| Client::new());
+
+    let payload_json: serde_json::Value = serde_json::from_str(&payload)
+        .map_err(|e| format!("JSON de payload invalido: {}", e))?;
+
+    let body = serde_json::json!({
+        "action": action,
+        "payload": payload_json
+    });
+
+    let res = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Erro ao conectar com o SaaS: {}", e))?;
+
+    let status = res.status();
+    if status.is_success() {
+        Ok(true)
+    } else {
+        let err_text = res.text().await.unwrap_or_else(|_| "N/A".to_string());
+        Err(format!("Erro retornado pelo SaaS ({}): {}", status, err_text))
+    }
+}

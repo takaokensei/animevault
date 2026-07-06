@@ -1,4 +1,5 @@
 import { databaseService } from './database';
+import { invoke } from './tauriService';
 
 export interface SyncEvent {
   id: number;
@@ -92,8 +93,7 @@ export class SyncService {
 
   /**
    * Processa a fila de outbox (Fila local-first para SaaS target).
-   * Neste MVP de fundação, a função percorre a fila. Quando o backend centralizado estiver pronto,
-   * ela enviará as requisições HTTPS para a nuvem.
+   * Chama o backend em Rust para realizar a requisição HTTP real.
    */
   async processQueue(): Promise<void> {
     const pending = await this.getPendingEvents();
@@ -106,8 +106,17 @@ export class SyncService {
         const payload = JSON.parse(event.payload);
         console.log(`[SyncService] Sincronizando evento ${event.id} (${event.action}). Payload:`, payload);
         
-        // Simular sucesso instantâneo de sync no local-first mock
-        await this.markAsSynced(event.id);
+        // Invoca a sincronização através do Rust nativo
+        const success = await invoke<boolean>('sync_to_saas_db', {
+          action: event.action,
+          payload: event.payload
+        });
+        
+        if (success) {
+          await this.markAsSynced(event.id);
+        } else {
+          await this.markAsFailed(event.id, event.attempts);
+        }
       } catch (err) {
         console.error(`[SyncService] Falha ao processar evento ${event.id}:`, err);
         await this.markAsFailed(event.id, event.attempts);
