@@ -302,14 +302,14 @@ async function exchangeCodeForTokens(code: string, codeVerifier: string): Promis
   
   const params = {
     code,
-    codeVerifier,
-    redirectUri: REDIRECT_URI,
+    code_verifier: codeVerifier,
+    redirect_uri: REDIRECT_URI,
   };
   
   logger.debug('Enviando parâmetros para exchange', {
     code: code.substring(0, 20) + '...',
-    codeVerifier: codeVerifier.substring(0, 20) + '...',
-    redirectUri: REDIRECT_URI
+    code_verifier: codeVerifier.substring(0, 20) + '...',
+    redirect_uri: REDIRECT_URI
   });
   
   return executeWithRetry(async () => {
